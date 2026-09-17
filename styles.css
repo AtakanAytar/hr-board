@@ -283,6 +283,10 @@ body.is-dragging *{cursor:grabbing !important}
 .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--accent); background:var(--surface)}
 .card-meta{margin:0; font-size:12px}
 
+.people-section{display:flex; flex-direction:column; gap:10px}
+.people-section h3{font-size:14px}
+.people-section p{margin:-4px 0 2px}
+.people-rule{border:0; border-top:1px solid var(--border); margin:4px 0}
 .invite-row{display:flex; gap:8px}
 .invite-row input{flex:1; padding:9px 11px; border-radius:9px; border:1px solid var(--border-2); background:var(--surface-2); outline:none}
 .invite-row input:focus{border-color:var(--accent)}

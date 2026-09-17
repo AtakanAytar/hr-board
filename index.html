@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="A free, real-time kanban board for tracking open job requisitions and who owns them.">
-<title>Hiring Board</title>
+<meta name="description" content="A free, real-time HR board for tracking open roles and who owns each one.">
+<title>HR Board</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
 <div id="authScreen" class="auth-screen" hidden>
   <div class="auth-card">
     <div class="auth-mark">🗂️</div>
-    <h1>Hiring Board</h1>
+    <h1>HR Board</h1>
     <p class="auth-sub">Track every open role and who's driving it.</p>
     <button id="signInBtn" class="btn btn-google">
       <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
@@ -39,7 +39,7 @@
   <header class="topbar">
     <div class="topbar-left">
       <span class="brand-mark" aria-hidden="true">🗂️</span>
-      <h1 id="boardTitle" class="board-title" contenteditable="false" spellcheck="false">Hiring Board</h1>
+      <h1 id="boardTitle" class="board-title" contenteditable="false" spellcheck="false">HR Board</h1>
       <span id="demoBadge" class="badge badge-demo" hidden>Demo — not saved</span>
       <span id="syncDot" class="sync-dot" title="Live"></span>
     </div>
@@ -97,7 +97,7 @@
       <strong id="popName">—</strong>
       <span id="popEmail" class="muted"></span>
     </div>
-    <button class="pop-item" data-act="members"><span>👥</span> People &amp; access</button>
+    <button class="pop-item" data-act="members"><span>👥</span> People</button>
     <button class="pop-item" data-act="activity"><span>🕒</span> Activity log</button>
     <button class="pop-item" data-act="export-csv"><span>⬇️</span> Export CSV</button>
     <button class="pop-item" data-act="export-json"><span>🧾</span> Export JSON backup</button>
@@ -190,18 +190,39 @@
   </form>
 </dialog>
 
-<!-- ───────────────── People & access ───────────────── -->
+<!-- ───────────────── People ───────────────── -->
 <dialog id="membersDialog" class="dialog">
-  <header class="dlg-head"><h2>People &amp; access</h2>
+  <header class="dlg-head"><h2>People</h2>
     <button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </header>
   <div class="dlg-body">
-    <p class="muted small">Anyone you add here can open the board with their Google account and edit cards. Everyone else is blocked by the database itself, not just the UI.</p>
-    <form id="inviteForm" class="invite-row">
-      <input id="inviteEmail" type="email" placeholder="teammate@company.com" required autocomplete="off">
-      <button class="btn btn-primary btn-sm" type="submit">Add</button>
-    </form>
-    <ul id="memberList" class="member-list"></ul>
+
+    <section class="people-section">
+      <h3>Assignees</h3>
+      <p class="muted small">Anyone you track work for — hiring managers, recruiters, agencies.
+        <strong>No account or sign-in needed.</strong> Each one becomes a column in “By person”
+        and an option in the Owner field.</p>
+      <form id="assigneeForm" class="invite-row">
+        <input id="assigneeName" type="text" placeholder="Ayşe Demir" required autocomplete="off" maxlength="60">
+        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+      </form>
+      <ul id="assigneeList" class="member-list"></ul>
+    </section>
+
+    <hr class="people-rule">
+
+    <section class="people-section">
+      <h3>Board access</h3>
+      <p class="muted small">Only these Google accounts can open and edit this board — everyone
+        else is refused by the database, not just the interface. You only need someone here if
+        they use the board themselves.</p>
+      <form id="inviteForm" class="invite-row">
+        <input id="inviteEmail" type="email" placeholder="teammate@company.com" required autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+      </form>
+      <ul id="memberList" class="member-list"></ul>
+    </section>
+
   </div>
 </dialog>
 

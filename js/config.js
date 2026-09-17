@@ -22,7 +22,7 @@ export const firebaseConfig = {
 
 /* One shared board for the team. Change only if you want a second,
    separate board (e.g. "grad-hiring") living in the same project. */
-export const BOARD_ID = "hiring";
+export const BOARD_ID = "hr";
 
 export const DEFAULT_COLUMNS = [
   { id: "todo",    title: "To Do",       color: "#94a3b8" },

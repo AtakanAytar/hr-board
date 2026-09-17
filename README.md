@@ -1,4 +1,4 @@
-# Hiring Board
+# HR Board
 
 A free, real-time kanban board for tracking open roles and who owns each one.
 
@@ -12,6 +12,20 @@ which are stuck, and whose plate each one is sitting on.
 - **Works offline** — changes queue up and sync when the connection returns
 - **CSV + JSON export** — for reporting or backups
 - Search, filters (owner / priority / overdue / unassigned), activity log, dark mode, touch-friendly drag
+
+### Assigning work does not require an account
+
+The **People** dialog keeps two separate lists, and this distinction matters:
+
+| | Who belongs here | Needs a Google account? |
+|---|---|---|
+| **Assignees** | Anyone you track work for — hiring managers, agency contacts, people who will never touch the board | **No.** Just a name. |
+| **Board access** | People who actually open the board and move cards | Yes — they sign in with Google. |
+
+So you can run a board for fifteen hiring managers where only you ever log in.
+Assignees show up as columns in **By person** and as options in the Owner field;
+the Owner field is also free text, so you can type a name that is on neither list
+and it just works.
 
 Total running cost: **$0**. Static hosting on GitHub Pages, data in Firebase's
 free Spark tier (50,000 reads and 20,000 writes a day — a busy board uses a
@@ -35,7 +49,7 @@ seeded with sample roles, saved only in your own browser. Nothing is shared.
 ### 1. Create the Firebase project
 
 1. Go to <https://console.firebase.google.com> and sign in with a Google account.
-2. **Create a project** → name it (e.g. `hiring-board`) → you can turn Google
+2. **Create a project** → name it (e.g. `hr-board`) → you can turn Google
    Analytics **off**.
 3. Stay on the **Spark (free)** plan. Do not upgrade; you will not need to.
 
@@ -81,8 +95,8 @@ Push the folder to a GitHub repo, then **Settings → Pages → Source: deploy f
 branch → `main` / root**. GitHub gives you a URL in a minute or two.
 
 The first person to sign in becomes the **owner**. They open the account menu →
-**People & access** and add each teammate's Google address. Anyone not on that
-list is refused by the database with a clear message.
+**People** and add each teammate's Google address under **Board access**. Anyone
+not on that list is refused by the database with a clear message.
 
 ---
 

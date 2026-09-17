@@ -25,8 +25,13 @@ import { uid, todayISO } from "./util.js";
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
 
 const emptyBoard = (ownerEmail = "") => ({
-  name: "Hiring Board",
+  name: "HR Board",
   columns: DEFAULT_COLUMNS.map((c) => ({ ...c })),
+
+  /* Two separate lists, on purpose:
+       assignees     names you can put work on — no account, no sign-in
+       allowedEmails Google accounts allowed to open and edit the board  */
+  assignees: [],
   ownerEmail,
   allowedEmails: ownerEmail ? [ownerEmail] : [],
   members: ownerEmail ? [{ email: ownerEmail, name: "", role: "owner" }] : [],
@@ -86,9 +91,10 @@ function demoStore() {
     b.members = [
       { email: "you@example.com", name: "You", role: "owner" },
       { email: "deniz@example.com", name: "Deniz Arslan", role: "member" },
-      { email: "mert@example.com", name: "Mert Çelik", role: "member" },
     ];
     b.allowedEmails = b.members.map((m) => m.email);
+    /* Mert and Ayşe never sign in — they are just people work sits on. */
+    b.assignees = ["You", "Deniz Arslan", "Mert Çelik", "Ayşe Demir"];
     const day = (n) => {
       const d = new Date();
       d.setDate(d.getDate() + n);
@@ -222,6 +228,7 @@ async function cloudStore() {
         if (!snap.exists()) {
           await setDoc(boardRef, {
             ...emptyBoard(api.user.email),
+            assignees: api.user.name ? [api.user.name] : [],
             members: [{ email: api.user.email, name: api.user.name, role: "owner" }],
           });
         }

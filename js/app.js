@@ -87,7 +87,7 @@ function paintUser(user) {
 
 function syncBoardChrome() {
   const t = $("#boardTitle");
-  if (document.activeElement !== t) t.textContent = state.board.name || "Hiring Board";
+  if (document.activeElement !== t) t.textContent = state.board.name || "HR Board";
   t.contentEditable = "true";
   renderOwnerFilterChips();
   refreshDatalists();
@@ -96,13 +96,10 @@ function syncBoardChrome() {
 /* ============================================================
    Derived data
    ============================================================ */
-const peopleFromBoard = () =>
-  (state.board?.members || []).map((m) => m.name || m.email).filter(Boolean);
-
-/** Every owner name that appears on the board, plus invited members. */
+/** Everyone work can sit on: the roster, plus any name already on a card.
+    Deliberately unrelated to who has a login — see the People dialog. */
 function allOwners() {
-  const set = new Set();
-  peopleFromBoard().forEach((n) => set.add(n));
+  const set = new Set(state.board?.assignees || []);
   state.cards.forEach((c) => c.owner && set.add(c.owner));
   return [...set].sort((a, b) => a.localeCompare(b));
 }
@@ -333,7 +330,7 @@ function wireChrome() {
   const title = $("#boardTitle");
   title.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); title.blur(); } });
   title.addEventListener("blur", () => {
-    const name = title.textContent.trim().slice(0, 80) || "Hiring Board";
+    const name = title.textContent.trim().slice(0, 80) || "HR Board";
     title.textContent = name;
     if (name !== state.board.name) store.saveBoard({ name });
   });
@@ -510,11 +507,26 @@ function nextOrder(columnId) {
 }
 
 /* ============================================================
-   People & access
+   People — assignees (no account) and board access (accounts)
    ============================================================ */
 function openMembers() {
+  renderAssignees();
   renderMembers();
   $("#membersDialog").showModal();
+}
+
+/** The roster of people work can be assigned to. No sign-in involved. */
+function renderAssignees() {
+  const names = state.board?.assignees || [];
+  const count = (n) => state.cards.filter((c) => c.owner === n).length;
+  $("#assigneeList").innerHTML = names.length
+    ? names.map((n) => `<li>
+        <span class="pip" style="background:${esc(colorFor(n))}">${esc(initials(n))}</span>
+        <span>${esc(n)}</span>
+        <span class="role">${count(n)} ${count(n) === 1 ? "role" : "roles"}</span>
+        <button class="icon-btn" data-drop-assignee="${esc(n)}" title="Remove from list" aria-label="Remove ${esc(n)}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </li>`).join("")
+    : `<li class="muted small">No one yet — add the people you assign roles to.</li>`;
 }
 
 function renderMembers() {
@@ -539,6 +551,37 @@ function renderMembers() {
 }
 
 function wireMembersDialog() {
+  $("#assigneeForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = $("#assigneeName").value.trim().replace(/\s+/g, " ");
+    if (!name) return;
+    const assignees = [...(state.board.assignees || [])];
+    if (assignees.some((a) => a.toLowerCase() === name.toLowerCase())) return toast("Already on the list.");
+    assignees.push(name);
+    assignees.sort((a, b) => a.localeCompare(b));
+    await store.saveBoard({ assignees });
+    store.logActivity(`added ${name} as an assignee`);
+    $("#assigneeName").value = "";
+    renderAssignees();
+    refreshDatalists();
+    toast(`${name} added`);
+  });
+
+  $("#assigneeList").addEventListener("click", async (e) => {
+    const name = e.target.closest("[data-drop-assignee]")?.dataset.dropAssignee;
+    if (!name) return;
+    const held = state.cards.filter((c) => c.owner === name).length;
+    const warn = held
+      ? `${name} still owns ${held} role(s). They stay assigned and ${name} keeps showing as a column until you move them. Remove from the list anyway?`
+      : `Remove ${name} from the assignee list?`;
+    if (!confirm(warn)) return;
+    const assignees = (state.board.assignees || []).filter((a) => a !== name);
+    await store.saveBoard({ assignees });
+    store.logActivity(`removed ${name} from the assignee list`);
+    renderAssignees();
+    refreshDatalists();
+  });
+
   $("#inviteForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("#inviteEmail").value.trim().toLowerCase();
@@ -547,7 +590,7 @@ function wireMembersDialog() {
     if (members.some((m) => m.email === email)) return toast("Already on the list.");
     members.push({ email, name: "", role: "member" });
     await store.saveBoard({ members, allowedEmails: members.map((m) => m.email) });
-    store.logActivity(`invited ${email}`);
+    store.logActivity(`gave ${email} access`);
     $("#inviteEmail").value = "";
     renderMembers();
     toast("Added — they can sign in with Google now.");
@@ -581,13 +624,13 @@ function exportCSV() {
       (c.tags || []).join("; "), c.notes,
       c.updatedAt ? new Date(c.updatedAt).toISOString().slice(0, 10) : "",
     ]));
-  downloadFile(`hiring-board-${new Date().toISOString().slice(0, 10)}.csv`, "﻿" + toCSV(rows), "text/csv");
+  downloadFile(`hr-board-${new Date().toISOString().slice(0, 10)}.csv`, "﻿" + toCSV(rows), "text/csv");
   toast("CSV downloaded");
 }
 
 function exportJSON() {
   downloadFile(
-    `hiring-board-backup-${new Date().toISOString().slice(0, 10)}.json`,
+    `hr-board-backup-${new Date().toISOString().slice(0, 10)}.json`,
     JSON.stringify({ board: state.board, cards: state.cards }, null, 2),
     "application/json",
   );
