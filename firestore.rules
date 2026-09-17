@@ -1,0 +1,66 @@
+rules_version = '2';
+
+/*  Access model
+    ------------
+    A board document carries `ownerEmail` and `allowedEmails`.
+    Only signed-in Google accounts whose email is in `allowedEmails`
+    can read or write that board and its cards. Everyone else is
+    refused by the database, so an leaked URL is not a leaked board.
+
+    Paste this whole file into:
+      Firebase console -> Firestore Database -> Rules -> Publish
+*/
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function boardData(boardId) {
+      return get(/databases/$(database)/documents/boards/$(boardId)).data;
+    }
+
+    function isMember(boardId) {
+      return signedIn() && myEmail() in boardData(boardId).allowedEmails;
+    }
+
+    function isOwner(boardId) {
+      return signedIn() && boardData(boardId).ownerEmail == myEmail();
+    }
+
+    match /boards/{boardId} {
+
+      // The first person to sign in creates the board and becomes its
+      // owner. They must put themselves on the allow list in the same write.
+      allow create: if signedIn()
+                    && request.resource.data.ownerEmail == myEmail()
+                    && myEmail() in request.resource.data.allowedEmails;
+
+      allow read: if isMember(boardId);
+
+      // Members may rename the board and edit columns. Only the owner may
+      // change who has access, and nobody may hand the board to someone else.
+      allow update: if isMember(boardId)
+                    && request.resource.data.ownerEmail == resource.data.ownerEmail
+                    && (request.resource.data.allowedEmails == resource.data.allowedEmails
+                        || isOwner(boardId));
+
+      allow delete: if isOwner(boardId);
+
+      match /cards/{cardId} {
+        allow read, create, update, delete: if isMember(boardId);
+      }
+
+      // Append-only history: members add entries, nobody rewrites them.
+      match /activity/{entryId} {
+        allow read, create: if isMember(boardId);
+        allow update, delete: if false;
+      }
+    }
+  }
+}

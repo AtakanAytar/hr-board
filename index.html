@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A free, real-time kanban board for tracking open job requisitions and who owns them.">
+<title>Hiring Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ───────────────── Sign-in gate ───────────────── -->
+<div id="authScreen" class="auth-screen" hidden>
+  <div class="auth-card">
+    <div class="auth-mark">🗂️</div>
+    <h1>Hiring Board</h1>
+    <p class="auth-sub">Track every open role and who's driving it.</p>
+    <button id="signInBtn" class="btn btn-google">
+      <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
+        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.1 24.6c0-1.6-.15-3.2-.43-4.6H24v9.1h12.4c-.5 2.9-2.1 5.4-4.6 7l7.6 5.9c4.4-4.1 6.7-10.1 6.7-17.4z"/>
+        <path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.3 0 20 0 24s.9 7.7 2.6 10.8l7.8-6.1z"/>
+        <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.4 0-11.7-3.7-13.6-8.9l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
+      </svg>
+      Continue with Google
+    </button>
+    <button id="demoBtn" class="btn btn-ghost btn-sm">Explore the demo board</button>
+    <p id="authError" class="auth-error" hidden></p>
+  </div>
+</div>
+
+<!-- ───────────────── App ───────────────── -->
+<div id="app" class="app" hidden>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="brand-mark" aria-hidden="true">🗂️</span>
+      <h1 id="boardTitle" class="board-title" contenteditable="false" spellcheck="false">Hiring Board</h1>
+      <span id="demoBadge" class="badge badge-demo" hidden>Demo — not saved</span>
+      <span id="syncDot" class="sync-dot" title="Live"></span>
+    </div>
+
+    <div class="topbar-search">
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" type="search" placeholder="Search roles, owners, tags…" autocomplete="off" aria-label="Search cards">
+    </div>
+
+    <div class="topbar-right">
+      <div class="seg" role="group" aria-label="View mode">
+        <button class="seg-btn is-active" data-view="status">Status</button>
+        <button class="seg-btn" data-view="owner">By person</button>
+      </div>
+      <button id="filterBtn" class="icon-btn" title="Filter" aria-label="Filter">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+        <span id="filterCount" class="icon-badge" hidden>0</span>
+      </button>
+      <button id="themeBtn" class="icon-btn" title="Toggle theme" aria-label="Toggle theme">
+        <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+        <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
+      </button>
+      <button id="menuBtn" class="avatar-btn" aria-label="Account menu"><img id="userAvatar" alt="" hidden><span id="userInitial">?</span></button>
+    </div>
+  </header>
+
+  <!-- filter tray -->
+  <div id="filterTray" class="filter-tray" hidden>
+    <div class="tray-group">
+      <span class="tray-label">Owner</span>
+      <div id="ownerChips" class="chips"></div>
+    </div>
+    <div class="tray-group">
+      <span class="tray-label">Priority</span>
+      <div id="priorityChips" class="chips">
+        <button class="chip" data-priority="urgent">Urgent</button>
+        <button class="chip" data-priority="high">High</button>
+        <button class="chip" data-priority="normal">Normal</button>
+        <button class="chip" data-priority="low">Low</button>
+      </div>
+    </div>
+    <div class="tray-group">
+      <span class="tray-label">Flags</span>
+      <div class="chips">
+        <button class="chip" data-flag="overdue">Overdue</button>
+        <button class="chip" data-flag="unassigned">Unassigned</button>
+      </div>
+    </div>
+    <button id="clearFilters" class="btn btn-ghost btn-sm">Clear all</button>
+  </div>
+
+  <!-- account dropdown -->
+  <div id="accountMenu" class="popover" hidden>
+    <div class="pop-head">
+      <strong id="popName">—</strong>
+      <span id="popEmail" class="muted"></span>
+    </div>
+    <button class="pop-item" data-act="members"><span>👥</span> People &amp; access</button>
+    <button class="pop-item" data-act="activity"><span>🕒</span> Activity log</button>
+    <button class="pop-item" data-act="export-csv"><span>⬇️</span> Export CSV</button>
+    <button class="pop-item" data-act="export-json"><span>🧾</span> Export JSON backup</button>
+    <hr>
+    <button class="pop-item danger" data-act="signout"><span>↩︎</span> Sign out</button>
+  </div>
+
+  <main id="boardWrap" class="board-wrap">
+    <div id="board" class="board"></div>
+  </main>
+
+  <div id="emptyState" class="empty-state" hidden>
+    <p>No cards match your filters.</p>
+    <button class="btn btn-ghost btn-sm" data-act="clear-filters">Clear filters</button>
+  </div>
+</div>
+
+<!-- ───────────────── Card editor ───────────────── -->
+<dialog id="cardDialog" class="dialog">
+  <form id="cardForm" method="dialog">
+    <header class="dlg-head">
+      <input id="f_title" class="dlg-title-input" name="title" placeholder="Role title — e.g. Senior Backend Engineer" required maxlength="120" autocomplete="off">
+      <button type="button" class="icon-btn" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+
+    <div class="dlg-body">
+      <div class="field-grid">
+        <label class="field">
+          <span>Owner</span>
+          <input id="f_owner" name="owner" list="ownerList" placeholder="Who's driving this?" autocomplete="off">
+          <datalist id="ownerList"></datalist>
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select id="f_column" name="columnId"></select>
+        </label>
+        <label class="field">
+          <span>Priority</span>
+          <select id="f_priority" name="priority">
+            <option value="urgent">🔴 Urgent</option>
+            <option value="high">🟠 High</option>
+            <option value="normal" selected>🔵 Normal</option>
+            <option value="low">⚪ Low</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Target date</span>
+          <input id="f_due" name="dueDate" type="date">
+        </label>
+        <label class="field">
+          <span>Department</span>
+          <input id="f_dept" name="department" list="deptList" placeholder="Engineering" autocomplete="off">
+          <datalist id="deptList"></datalist>
+        </label>
+        <label class="field">
+          <span>Location</span>
+          <input id="f_location" name="location" placeholder="Istanbul / Remote" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>Openings</span>
+          <input id="f_openings" name="openings" type="number" min="1" max="999" value="1">
+        </label>
+        <label class="field">
+          <span>Candidates in pipeline</span>
+          <input id="f_candidates" name="candidates" type="number" min="0" max="9999" value="0">
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Tags <em class="muted">comma separated</em></span>
+        <input id="f_tags" name="tags" placeholder="backlog, referral, agency" autocomplete="off">
+      </label>
+
+      <label class="field">
+        <span>Notes</span>
+        <textarea id="f_notes" name="notes" rows="4" placeholder="Hiring manager, comp band, blockers…"></textarea>
+      </label>
+
+      <p id="cardMeta" class="card-meta muted"></p>
+    </div>
+
+    <footer class="dlg-foot">
+      <button type="button" id="deleteCardBtn" class="btn btn-danger-ghost btn-sm" hidden>Delete</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </footer>
+  </form>
+</dialog>
+
+<!-- ───────────────── People & access ───────────────── -->
+<dialog id="membersDialog" class="dialog">
+  <header class="dlg-head"><h2>People &amp; access</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </header>
+  <div class="dlg-body">
+    <p class="muted small">Anyone you add here can open the board with their Google account and edit cards. Everyone else is blocked by the database itself, not just the UI.</p>
+    <form id="inviteForm" class="invite-row">
+      <input id="inviteEmail" type="email" placeholder="teammate@company.com" required autocomplete="off">
+      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+    <ul id="memberList" class="member-list"></ul>
+  </div>
+</dialog>
+
+<!-- ───────────────── Activity ───────────────── -->
+<dialog id="activityDialog" class="dialog">
+  <header class="dlg-head"><h2>Activity log</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </header>
+  <div class="dlg-body"><ul id="activityList" class="activity-list"></ul></div>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
