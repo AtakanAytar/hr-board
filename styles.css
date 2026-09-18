@@ -224,6 +224,7 @@ svg{fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stro
 .card[data-priority="normal"]{border-left-color:var(--p-normal)}
 .card[data-priority="low"]{border-left-color:var(--p-low)}
 .card.is-ghost{opacity:.35}
+.card.is-pressing{transform:scale(.97); border-color:var(--accent)}
 .card-title{font-size:14px; font-weight:550; line-height:1.35; word-break:break-word}
 .card-tags{display:flex; flex-wrap:wrap; gap:4px; margin-top:8px}
 .tag{font-size:11px; padding:2px 7px; border-radius:5px; background:var(--surface-3); color:var(--text-2)}
@@ -249,7 +250,8 @@ svg{fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stro
   box-shadow:var(--shadow-3); transform:rotate(1.5deg); cursor:grabbing;
 }
 .drop-line{height:2px; border-radius:2px; background:var(--accent); margin:1px 0; flex:none}
-body.is-dragging{cursor:grabbing; user-select:none}
+body.is-dragging{cursor:grabbing; user-select:none; touch-action:none}
+body.is-dragging .board-wrap, body.is-dragging .col-cards{touch-action:none}
 body.is-dragging *{cursor:grabbing !important}
 
 /* ============ dialogs ============ */
@@ -317,14 +319,78 @@ body.is-dragging *{cursor:grabbing !important}
 }
 
 /* ============ responsive ============ */
-@media (max-width:860px){
-  .topbar{flex-wrap:wrap; height:auto; padding:10px 12px; gap:10px}
-  .topbar-search{order:3; max-width:none; flex-basis:100%; margin:0}
-  .board-title{max-width:44vw}
-  .seg-btn{padding:5px 9px; font-size:13px}
-  .field-grid{grid-template-columns:1fr}
-  .board-wrap{padding:12px}
-  .column{width:84vw; max-width:320px}
-  .drag-layer{width:78vw; max-width:300px}
+
+/* Tablets and narrow laptops */
+@media (max-width:980px){
+  .topbar-search{max-width:320px}
+  .board-title{max-width:26vw}
 }
+
+/* Phones */
+@media (max-width:860px){
+  .topbar{
+    flex-wrap:wrap; height:auto; padding:8px 10px 10px; gap:8px;
+    position:sticky; top:0; padding-top:calc(8px + env(safe-area-inset-top));
+  }
+  .topbar-left{flex:1 1 auto; min-width:0; gap:8px}
+  .brand-mark{font-size:17px}
+  .board-title{font-size:15.5px; max-width:42vw}
+  .badge-demo{font-size:10px; padding:2px 6px}
+
+  /* full-width search on its own row, below the controls */
+  .topbar-search{order:3; flex:1 1 100%; max-width:none; margin:0}
+  #search{padding-top:10px; padding-bottom:10px; font-size:16px} /* 16px stops iOS zooming on focus */
+
+  .topbar-right{gap:2px}
+  .seg-btn{padding:7px 11px; font-size:13px}
+  .icon-btn{width:38px; height:38px}          /* ≥44px tap target with spacing */
+  .avatar-btn{width:34px; height:34px}
+
+  .filter-tray{gap:12px; padding:10px 12px}
+  .tray-group{flex:1 1 100%}
+  .chip{padding:7px 13px; font-size:13.5px}   /* thumbs, not cursors */
+
+  .popover{right:8px; left:8px; width:auto; top:auto}
+  .pop-item{padding:12px}
+
+  /* one column per screen, snapped, swipe sideways between them */
+  .board-wrap{padding:10px; scroll-snap-type:x mandatory; scroll-padding:10px}
+  .board{gap:10px}
+  .column{width:86vw; max-width:360px; scroll-snap-align:center}
+  .col-head{padding:12px 12px 8px}
+  .col-head .icon-btn{opacity:1}              /* no hover on touch — always show */
+  .card{padding:12px 12px}
+  .card-title{font-size:14.5px}
+  .add-card{padding:12px}
+  .add-column{width:78vw}
+
+  /* dialogs become full-screen sheets */
+  .dialog{
+    width:100%; max-width:100%; height:100dvh; max-height:100dvh;
+    border-radius:0; border:0;
+  }
+  .dlg-head{padding:calc(14px + env(safe-area-inset-top)) 12px 12px 16px}
+  .dlg-body{padding:16px; gap:16px}
+  .field-grid{grid-template-columns:1fr}
+  .field input, .field select, .field textarea, .invite-row input, .arch-search{
+    padding:12px; font-size:16px;
+  }
+  .dlg-title-input{font-size:17px}
+  .dlg-foot{
+    border-radius:0; padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    position:sticky; bottom:0;
+  }
+  .dlg-foot .btn{padding:11px 16px}
+
+  .archive-list li, .member-list li{padding:12px 4px}
+  .toast{bottom:calc(18px + env(safe-area-inset-bottom)); max-width:calc(100vw - 32px); text-align:center}
+}
+
+/* Very narrow phones */
+@media (max-width:400px){
+  .board-title{max-width:34vw; font-size:15px}
+  .seg-btn{padding:7px 9px; font-size:12.5px}
+  .column{width:90vw}
+}
+
 @media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important}}

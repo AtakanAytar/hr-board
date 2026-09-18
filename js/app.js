@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609180941";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180941";
+import { createStore, makeCard } from "./store.js?v=202609180953";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180953";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609180941";
+} from "./util.js?v=202609180953";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -286,6 +286,15 @@ function wireChrome() {
     catch (e) {
       if (e?.code === "auth/popup-closed-by-user" || e?.code === "auth/cancelled-popup-request") return;
       const box = $("#authError");
+      if (/initial state|sessionStorage/i.test(e?.message || "")) {
+        box.innerHTML =
+          "Giriş tamamlanamadı. Bu genellikle bağlantı bir uygulamanın kendi tarayıcısında " +
+          "(WhatsApp, Instagram, LinkedIn gibi) açıldığında olur.<br><br>" +
+          "<b>Çözüm:</b> Safari veya Chrome'u açıp adresi doğrudan yazın: " +
+          `<b>${esc(location.host + location.pathname)}</b>`;
+        box.hidden = false;
+        return;
+      }
       box.textContent = e?.code === "auth/unauthorized-domain"
         ? `Bu sitenin adresi Firebase'de henüz izinli değil. Authentication → Settings → Authorized domains altına "${location.hostname}" ekleyin.`
         : (e?.message || "Giriş yapılamadı.");
@@ -508,7 +517,18 @@ function openCard(id, seed = {}) {
     : "";
 
   dlg.showModal();
-  setTimeout(() => $("#f_title").focus(), 40);
+
+  /*  showModal() focuses the first field on its own, which on a phone throws
+      the keyboard up just to read a task, and parks the caret at the end of a
+      long title so its start scrolls out of view. Take focus back to the
+      dialog unless this is a brand-new task, where typing is the point.   */
+  const titleEl = $("#f_title");
+  if (card) {
+    dlg.focus();
+    titleEl.scrollLeft = 0;
+  } else {
+    setTimeout(() => titleEl.focus(), 40);
+  }
 }
 
 function wireCardDialog() {
@@ -777,6 +797,13 @@ function initDrag() {
   let drag = null;
   let raf = 0;
 
+  /*  Touch needs a different opening move than a mouse. A finger that starts
+      on a card is far more often scrolling the column than dragging the card,
+      so on touch a drag only begins after a deliberate hold. A mouse keeps the
+      immediate small-movement threshold.                                    */
+  const HOLD_MS = 280;
+  const MOVE_SLOP = 10;
+
   boardEl.addEventListener("pointerdown", (e) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
     const card = e.target.closest(".card");
@@ -784,18 +811,41 @@ function initDrag() {
 
     drag = {
       id: card.dataset.id, el: card, started: false,
+      touch: e.pointerType === "touch", armed: e.pointerType !== "touch",
       sx: e.clientX, sy: e.clientY, pointerId: e.pointerId,
-      layer: null, line: null, target: null,
+      layer: null, line: null, target: null, holdTimer: 0,
     };
+
+    if (drag.touch) {
+      card.classList.add("is-pressing");
+      drag.holdTimer = setTimeout(() => {
+        if (!drag) return;
+        drag.armed = true;
+        card.classList.remove("is-pressing");
+        startVisualDrag();
+        navigator.vibrate?.(12);
+      }, HOLD_MS);
+    }
     boardEl.setPointerCapture(e.pointerId);
   });
 
   boardEl.addEventListener("pointermove", (e) => {
     if (!drag) return;
     const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    const moved = Math.hypot(dx, dy);
+
+    /* Moving before the hold completes means they meant to scroll. */
+    if (drag.touch && !drag.armed) {
+      if (moved > MOVE_SLOP) {
+        clearTimeout(drag.holdTimer);
+        drag.el.classList.remove("is-pressing");
+        drag = null;
+      }
+      return;
+    }
 
     if (!drag.started) {
-      if (Math.hypot(dx, dy) < 6) return;
+      if (moved < 6) return;
       startVisualDrag();
     }
 
@@ -809,6 +859,8 @@ function initDrag() {
   const finish = async (e) => {
     if (!drag) return;
     const d = drag;
+    clearTimeout(d.holdTimer);
+    d.el.classList.remove("is-pressing");
     drag = null;
     cancelAnimationFrame(raf); raf = 0;
     document.body.classList.remove("is-dragging");
@@ -831,6 +883,7 @@ function initDrag() {
   boardEl.addEventListener("pointercancel", finish);
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && drag?.started) {
+      clearTimeout(drag.holdTimer);
       drag.layer?.remove(); drag.line?.remove();
       drag.el.classList.remove("is-ghost");
       drag = null;

@@ -2,3 +2,4 @@
 node_modules/
 *.log
 firestore.rules.local
+__mobile-preview.html

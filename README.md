@@ -163,6 +163,29 @@ is exactly the cost this design avoids. Load more pages to widen the search.
 Title, owner, status, priority, due date, tags, notes. Deliberately little —
 add fields when you actually miss them, not in advance.
 
+### On a phone
+
+One column fills the screen and snaps as you swipe sideways; search moves to its
+own row; dialogs become full-screen sheets; inputs are 16px so iOS does not zoom
+when they are focused; tap targets are sized for thumbs.
+
+**Dragging uses a short hold, not an immediate drag.** A finger that starts on a
+card is usually scrolling the column, so an immediate drag would make the board
+impossible to scroll. Hold for about a quarter second — the card lifts, with a
+vibration where the device supports one — then move it.
+
+**Sign-in falls back from popup to redirect.** A popup is better when it works,
+but it fails inside in-app browsers (a link tapped in WhatsApp, Instagram or
+LinkedIn) and under storage partitioning, surfacing as *"missing initial
+state"*. On those failures the app switches to a full-page redirect, and if that
+also fails it says, in Turkish, to open the address directly in Safari or
+Chrome.
+
+The durable fix for that class of problem is hosting the app on the same origin
+as `authDomain`, which GitHub Pages cannot do. Moving to Firebase Hosting
+(`hr-board-89600.web.app`, also free) would make it same-origin and remove the
+failure mode entirely.
+
 ### Roles
 
 Two roles, no configuration. The owner is whoever created the board; everyone

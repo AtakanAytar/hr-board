@@ -19,8 +19,8 @@
      store.logActivity(text)
      store.onActivity(cb)
 ------------------------------------------------------------------- */
-import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180941";
-import { uid, todayISO } from "./util.js?v=202609180941";
+import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180953";
+import { uid, todayISO } from "./util.js?v=202609180953";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
 
@@ -183,7 +183,8 @@ async function cloudStore() {
   ]);
 
   const {
-    getAuth, GoogleAuthProvider, signInWithPopup, signOut: fbSignOut,
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+    getRedirectResult, signOut: fbSignOut,
     onAuthStateChanged, setPersistence, browserLocalPersistence,
   } = authMod;
   const {
@@ -195,6 +196,10 @@ async function cloudStore() {
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+  /* Completes a redirect sign-in. Harmless on a normal load. Errors here are
+     not worth surfacing — onAuthStateChanged reports the real outcome. */
+  await getRedirectResult(auth).catch(() => {});
 
   let db;
   try {
@@ -227,10 +232,30 @@ async function cloudStore() {
       });
     },
 
+    /*  A popup is the better flow when it works: it keeps the page alive and
+        avoids a full round trip. It does not always work on phones — in-app
+        browsers (a link tapped inside a messaging app) and storage
+        partitioning both break the channel the popup reports back through,
+        which surfaces as "missing initial state". Falling back to a redirect
+        costs a page reload and survives all of that.                      */
     async signIn() {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      await signInWithPopup(auth, provider);
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        const code = e?.code || "";
+        if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") throw e;
+        const popupUnusable = [
+          "auth/popup-blocked",
+          "auth/operation-not-supported-in-this-environment",
+          "auth/web-storage-unsupported",
+          "auth/internal-error",
+          "auth/missing-initial-state",
+        ].includes(code) || /initial state|sessionStorage|storage/i.test(e?.message || "");
+        if (!popupUnusable) throw e;
+        await signInWithRedirect(auth, provider);
+      }
     },
 
     async signOut() {
