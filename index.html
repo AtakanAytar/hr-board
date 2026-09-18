@@ -1,24 +1,24 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="tr" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="A free, real-time task board for HR teams — who is doing what, and where it stands.">
+<meta name="description" content="İK ekipleri için ücretsiz, canlı görev panosu — kim ne yapıyor, işler hangi aşamada.">
 <title>HR Board</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
-<link rel="stylesheet" href="styles.css?v=202609180901">
+<link rel="stylesheet" href="styles.css?v=202609180913">
 </head>
 <body>
 
-<!-- ───────────────── Sign-in gate ───────────────── -->
+<!-- ───────────────── Giriş ekranı ───────────────── -->
 <div id="authScreen" class="auth-screen" hidden>
   <div class="auth-card">
     <div class="auth-mark">🗂️</div>
     <h1>HR Board</h1>
-    <p class="auth-sub">Who's doing what, and where it stands.</p>
+    <p class="auth-sub">Kim ne yapıyor, işler hangi aşamada.</p>
     <button id="signInBtn" class="btn btn-google">
       <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
         <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/>
@@ -26,85 +26,85 @@
         <path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.3 0 20 0 24s.9 7.7 2.6 10.8l7.8-6.1z"/>
         <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.4 0-11.7-3.7-13.6-8.9l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
       </svg>
-      Continue with Google
+      Google ile devam et
     </button>
-    <button id="demoBtn" class="btn btn-ghost btn-sm">Explore the demo board</button>
+    <button id="demoBtn" class="btn btn-ghost btn-sm">Demo panoyu incele</button>
     <p id="authError" class="auth-error" hidden></p>
     <p id="signedInAs" class="auth-who muted small" hidden></p>
-    <button id="signOutLink" class="btn btn-ghost btn-sm" hidden>Sign in with a different account</button>
+    <button id="signOutLink" class="btn btn-ghost btn-sm" hidden>Başka bir hesapla giriş yap</button>
   </div>
 </div>
 
-<!-- ───────────────── App ───────────────── -->
+<!-- ───────────────── Uygulama ───────────────── -->
 <div id="app" class="app" hidden>
 
   <header class="topbar">
     <div class="topbar-left">
       <span class="brand-mark" aria-hidden="true">🗂️</span>
       <h1 id="boardTitle" class="board-title" contenteditable="false" spellcheck="false">HR Board</h1>
-      <span id="demoBadge" class="badge badge-demo" hidden>Demo — not saved</span>
-      <span id="syncDot" class="sync-dot" title="Live"></span>
+      <span id="demoBadge" class="badge badge-demo" hidden>Demo — kaydedilmiyor</span>
+      <span id="syncDot" class="sync-dot" title="Canlı"></span>
     </div>
 
     <div class="topbar-search">
       <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="search" type="search" placeholder="Search tasks, owners, tags…" autocomplete="off" aria-label="Search cards">
+      <input id="search" type="search" placeholder="Görev, sorumlu, etiket ara…" autocomplete="off" aria-label="Görevlerde ara">
     </div>
 
     <div class="topbar-right">
-      <div class="seg" role="group" aria-label="View mode">
-        <button class="seg-btn is-active" data-view="status">Status</button>
-        <button class="seg-btn" data-view="owner">By person</button>
+      <div class="seg" role="group" aria-label="Görünüm">
+        <button class="seg-btn is-active" data-view="status">Durum</button>
+        <button class="seg-btn" data-view="owner">Kişiye göre</button>
       </div>
-      <button id="filterBtn" class="icon-btn" title="Filter" aria-label="Filter">
+      <button id="filterBtn" class="icon-btn" title="Filtrele" aria-label="Filtrele">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
         <span id="filterCount" class="icon-badge" hidden>0</span>
       </button>
-      <button id="themeBtn" class="icon-btn" title="Toggle theme" aria-label="Toggle theme">
+      <button id="themeBtn" class="icon-btn" title="Temayı değiştir" aria-label="Temayı değiştir">
         <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
         <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
       </button>
-      <button id="menuBtn" class="avatar-btn" aria-label="Account menu"><img id="userAvatar" alt="" hidden><span id="userInitial">?</span></button>
+      <button id="menuBtn" class="avatar-btn" aria-label="Hesap menüsü"><img id="userAvatar" alt="" hidden><span id="userInitial">?</span></button>
     </div>
   </header>
 
-  <!-- filter tray -->
+  <!-- filtre çekmecesi -->
   <div id="filterTray" class="filter-tray" hidden>
     <div class="tray-group">
-      <span class="tray-label">Owner</span>
+      <span class="tray-label">Sorumlu</span>
       <div id="ownerChips" class="chips"></div>
     </div>
     <div class="tray-group">
-      <span class="tray-label">Priority</span>
+      <span class="tray-label">Öncelik</span>
       <div id="priorityChips" class="chips">
-        <button class="chip" data-priority="urgent">Urgent</button>
-        <button class="chip" data-priority="high">High</button>
+        <button class="chip" data-priority="urgent">Acil</button>
+        <button class="chip" data-priority="high">Yüksek</button>
         <button class="chip" data-priority="normal">Normal</button>
-        <button class="chip" data-priority="low">Low</button>
+        <button class="chip" data-priority="low">Düşük</button>
       </div>
     </div>
     <div class="tray-group">
-      <span class="tray-label">Flags</span>
+      <span class="tray-label">İşaretler</span>
       <div class="chips">
-        <button class="chip" data-flag="overdue">Overdue</button>
-        <button class="chip" data-flag="unassigned">Unassigned</button>
+        <button class="chip" data-flag="overdue">Gecikmiş</button>
+        <button class="chip" data-flag="unassigned">Atanmamış</button>
       </div>
     </div>
-    <button id="clearFilters" class="btn btn-ghost btn-sm">Clear all</button>
+    <button id="clearFilters" class="btn btn-ghost btn-sm">Tümünü temizle</button>
   </div>
 
-  <!-- account dropdown -->
+  <!-- hesap menüsü -->
   <div id="accountMenu" class="popover" hidden>
     <div class="pop-head">
       <strong id="popName">—</strong>
       <span id="popEmail" class="muted"></span>
     </div>
-    <button class="pop-item" data-act="members"><span>👥</span> People</button>
-    <button class="pop-item" data-act="activity"><span>🕒</span> Activity log</button>
-    <button class="pop-item" data-act="export-csv"><span>⬇️</span> Export CSV</button>
-    <button class="pop-item" data-act="export-json"><span>🧾</span> Export JSON backup</button>
+    <button class="pop-item" data-act="members"><span>👥</span> Kişiler</button>
+    <button class="pop-item" data-act="activity"><span>🕒</span> İşlem geçmişi</button>
+    <button class="pop-item" data-act="export-csv"><span>⬇️</span> CSV olarak indir</button>
+    <button class="pop-item" data-act="export-json"><span>🧾</span> JSON yedeği indir</button>
     <hr>
-    <button class="pop-item danger" data-act="signout"><span>↩︎</span> Sign out</button>
+    <button class="pop-item danger" data-act="signout"><span>↩︎</span> Çıkış yap</button>
   </div>
 
   <main id="boardWrap" class="board-wrap">
@@ -112,17 +112,17 @@
   </main>
 
   <div id="emptyState" class="empty-state" hidden>
-    <p>No cards match your filters.</p>
-    <button class="btn btn-ghost btn-sm" data-act="clear-filters">Clear filters</button>
+    <p>Filtrelerinize uyan görev yok.</p>
+    <button class="btn btn-ghost btn-sm" data-act="clear-filters">Filtreleri temizle</button>
   </div>
 </div>
 
-<!-- ───────────────── Card editor ───────────────── -->
+<!-- ───────────────── Görev düzenleme ───────────────── -->
 <dialog id="cardDialog" class="dialog">
   <form id="cardForm" method="dialog">
     <header class="dlg-head">
-      <input id="f_title" class="dlg-title-input" name="title" placeholder="What needs doing?" required maxlength="140" autocomplete="off">
-      <button type="button" class="icon-btn" data-close aria-label="Close">
+      <input id="f_title" class="dlg-title-input" name="title" placeholder="Ne yapılacak?" required maxlength="140" autocomplete="off">
+      <button type="button" class="icon-btn" data-close aria-label="Kapat">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </header>
@@ -130,67 +130,67 @@
     <div class="dlg-body">
       <div class="field-grid">
         <label class="field">
-          <span>Owner</span>
-          <input id="f_owner" name="owner" list="ownerList" placeholder="Who's doing this?" autocomplete="off">
+          <span>Sorumlu</span>
+          <input id="f_owner" name="owner" list="ownerList" placeholder="Bunu kim yapıyor?" autocomplete="off">
           <datalist id="ownerList"></datalist>
         </label>
         <label class="field">
-          <span>Status</span>
+          <span>Durum</span>
           <select id="f_column" name="columnId"></select>
         </label>
         <label class="field">
-          <span>Priority</span>
+          <span>Öncelik</span>
           <select id="f_priority" name="priority">
-            <option value="urgent">🔴 Urgent</option>
-            <option value="high">🟠 High</option>
+            <option value="urgent">🔴 Acil</option>
+            <option value="high">🟠 Yüksek</option>
             <option value="normal" selected>🔵 Normal</option>
-            <option value="low">⚪ Low</option>
+            <option value="low">⚪ Düşük</option>
           </select>
         </label>
         <label class="field">
-          <span>Due date</span>
+          <span>Termin tarihi</span>
           <input id="f_due" name="dueDate" type="date">
         </label>
       </div>
 
       <label class="field">
-        <span>Tags <em class="muted">comma separated</em></span>
-        <input id="f_tags" name="tags" list="tagList" placeholder="hiring, payroll, onboarding" autocomplete="off">
+        <span>Etiketler <em class="muted">virgülle ayırın</em></span>
+        <input id="f_tags" name="tags" list="tagList" placeholder="işe alım, bordro, oryantasyon" autocomplete="off">
         <datalist id="tagList"></datalist>
       </label>
 
       <label class="field">
-        <span>Notes</span>
-        <textarea id="f_notes" name="notes" rows="4" placeholder="Context, links, blockers…"></textarea>
+        <span>Notlar</span>
+        <textarea id="f_notes" name="notes" rows="4" placeholder="Ayrıntılar, bağlantılar, engeller…"></textarea>
       </label>
 
       <p id="cardMeta" class="card-meta muted"></p>
     </div>
 
     <footer class="dlg-foot">
-      <button type="button" id="deleteCardBtn" class="btn btn-danger-ghost btn-sm" hidden>Delete</button>
+      <button type="button" id="deleteCardBtn" class="btn btn-danger-ghost btn-sm" hidden>Sil</button>
       <div class="spacer"></div>
-      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
-      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="button" class="btn btn-ghost" data-close>Vazgeç</button>
+      <button type="submit" class="btn btn-primary">Kaydet</button>
     </footer>
   </form>
 </dialog>
 
-<!-- ───────────────── People ───────────────── -->
+<!-- ───────────────── Kişiler ───────────────── -->
 <dialog id="membersDialog" class="dialog">
-  <header class="dlg-head"><h2>People</h2>
-    <button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <header class="dlg-head"><h2>Kişiler</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Kapat"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </header>
   <div class="dlg-body">
 
     <section class="people-section">
-      <h3>Assignees</h3>
-      <p class="muted small">Anyone you track work for — hiring managers, recruiters, agencies.
-        <strong>No account or sign-in needed.</strong> Each one becomes a column in “By person”
-        and an option in the Owner field.</p>
+      <h3>Sorumlular</h3>
+      <p class="muted small">İş takibi yaptığınız herkes — yöneticiler, işe alım uzmanları, ajanslar.
+        <strong>Hesap açmaları veya giriş yapmaları gerekmez.</strong> Her biri “Kişiye göre”
+        görünümünde bir sütun, Sorumlu alanında bir seçenek olur.</p>
       <form id="assigneeForm" class="invite-row">
         <input id="assigneeName" type="text" placeholder="Ayşe Demir" required autocomplete="off" maxlength="60">
-        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+        <button class="btn btn-primary btn-sm" type="submit">Ekle</button>
       </form>
       <ul id="assigneeList" class="member-list"></ul>
     </section>
@@ -198,13 +198,13 @@
     <hr class="people-rule">
 
     <section class="people-section">
-      <h3>Board access</h3>
-      <p class="muted small">Only these Google accounts can open and edit this board — everyone
-        else is refused by the database, not just the interface. You only need someone here if
-        they use the board themselves.</p>
+      <h3>Pano erişimi</h3>
+      <p class="muted small">Bu panoyu yalnızca buradaki Google hesapları açıp düzenleyebilir —
+        diğerleri sadece arayüzde değil, veritabanı düzeyinde engellenir. Birini buraya yalnızca
+        panoyu kendisi kullanacaksa eklemeniz gerekir.</p>
       <form id="inviteForm" class="invite-row">
-        <input id="inviteEmail" type="email" placeholder="teammate@company.com" required autocomplete="off">
-        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+        <input id="inviteEmail" type="email" placeholder="calisan@sirket.com" required autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit">Ekle</button>
       </form>
       <ul id="memberList" class="member-list"></ul>
     </section>
@@ -212,16 +212,16 @@
   </div>
 </dialog>
 
-<!-- ───────────────── Activity ───────────────── -->
+<!-- ───────────────── İşlem geçmişi ───────────────── -->
 <dialog id="activityDialog" class="dialog">
-  <header class="dlg-head"><h2>Activity log</h2>
-    <button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <header class="dlg-head"><h2>İşlem geçmişi</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Kapat"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </header>
   <div class="dlg-body"><ul id="activityList" class="activity-list"></ul></div>
 </dialog>
 
 <div id="toast" class="toast" hidden></div>
 
-<script type="module" src="js/app.js?v=202609180901"></script>
+<script type="module" src="js/app.js?v=202609180913"></script>
 </body>
 </html>

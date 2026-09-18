@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609180901";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180901";
+import { createStore, makeCard } from "./store.js?v=202609180913";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180913";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609180901";
+} from "./util.js?v=202609180913";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -89,14 +89,14 @@ function showBlockingError(message) {
      it is invisible unless the address is spelled out. */
   const who = store.user?.email;
   if (who) {
-    $("#signedInAs").textContent = `Signed in as ${who}`;
+    $("#signedInAs").textContent = `${who} olarak giriş yapıldı`;
     $("#signedInAs").hidden = false;
     $("#signOutLink").hidden = false;
   }
 }
 
 function paintUser(user) {
-  $("#popName").textContent = user.name || "Signed in";
+  $("#popName").textContent = user.name || "Giriş yapıldı";
   $("#popEmail").textContent = user.email || "";
   const img = $("#userAvatar"), ini = $("#userInitial");
   if (user.photo) { img.src = user.photo; img.hidden = false; ini.hidden = true; }
@@ -150,7 +150,7 @@ function activeColumns() {
     const names = allOwners();
     return [
       ...names.map((n) => ({ key: n, title: n, color: colorFor(n), kind: "owner" })),
-      { key: "__none__", title: "Unassigned", color: "#94a3b8", kind: "owner" },
+      { key: "__none__", title: "Atanmamış", color: "#94a3b8", kind: "owner" },
     ];
   }
   const cols = state.board?.columns?.length ? state.board.columns : DEFAULT_COLUMNS;
@@ -186,7 +186,7 @@ function render() {
   board.innerHTML =
     cols.map((col) => columnHTML(col, cards.filter((c) => bucketOf(c) === col.key))).join("") +
     (state.view === "status"
-      ? `<button class="add-column" data-act="add-column">+ Add a column</button>`
+      ? `<button class="add-column" data-act="add-column">+ Sütun ekle</button>`
       : "");
 
   $("#emptyState").hidden = !(cards.length === 0 && state.cards.length > 0);
@@ -205,14 +205,14 @@ function columnHTML(col, cards) {
             data-col-name="${esc(col.key)}">${esc(col.title)}</span>
       <span class="col-count">${cards.length}</span>
       <span class="spacer"></span>
-      ${editable ? `<button class="icon-btn" data-act="del-column" data-col="${esc(col.key)}" title="Delete column" aria-label="Delete column">
+      ${editable ? `<button class="icon-btn" data-act="del-column" data-col="${esc(col.key)}" title="Sütunu sil" aria-label="Sütunu sil">
         <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>` : ""}
     </header>
     <div class="col-cards" data-drop="${esc(col.key)}">
       ${cards.map(cardHTML).join("")}
     </div>
     <div class="col-foot">
-      <button class="add-card" data-act="add-card" data-col="${esc(col.key)}">+ Add a task</button>
+      <button class="add-card" data-act="add-card" data-col="${esc(col.key)}">+ Görev ekle</button>
     </div>
   </section>`;
 }
@@ -223,13 +223,13 @@ function cardHTML(c) {
 
   return `
   <article class="card" data-id="${esc(c.id)}" data-priority="${esc(c.priority || "normal")}" tabindex="0">
-    <div class="card-title">${esc(c.title || "Untitled task")}</div>
+    <div class="card-title">${esc(c.title || "Başlıksız görev")}</div>
     ${tags.length ? `<div class="card-tags">${tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
     <div class="card-foot">
       <span class="who">
         ${c.owner
           ? `<span class="pip" style="background:${esc(colorFor(c.owner))}">${esc(initials(c.owner))}</span><b>${esc(c.owner)}</b>`
-          : `<span class="pip is-empty">?</span><span class="muted">Unassigned</span>`}
+          : `<span class="pip is-empty">?</span><span class="muted">Atanmamış</span>`}
       </span>
       <span class="spacer"></span>
       ${due.text ? `<span class="due ${due.cls}">${esc(due.text)}</span>` : ""}
@@ -241,7 +241,7 @@ function renderOwnerFilterChips() {
   const owners = allOwners();
   setHTML("#ownerChips",
     owners.map((o) => `<button class="chip${state.filters.owners.has(o) ? " is-on" : ""}" data-owner="${esc(o)}">${esc(o)}</button>`).join("") +
-    `<button class="chip${state.filters.owners.has("__none__") ? " is-on" : ""}" data-owner="__none__">Unassigned</button>`);
+    `<button class="chip${state.filters.owners.has("__none__") ? " is-on" : ""}" data-owner="__none__">Atanmamış</button>`);
 }
 
 function refreshDatalists() {
@@ -252,7 +252,7 @@ function refreshDatalists() {
 function renderActivity(items) {
   setHTML("#activityList", (items || []).length
     ? items.map((a) => `<li>${esc(a.text)} <em class="muted">— ${esc(a.who || "")}</em><time>${esc(fmtWhen(a.ts))}</time></li>`).join("")
-    : `<li class="muted">Nothing yet.</li>`);
+    : `<li class="muted">Henüz bir kayıt yok.</li>`);
 }
 
 /* ============================================================
@@ -266,8 +266,8 @@ function wireChrome() {
       if (e?.code === "auth/popup-closed-by-user" || e?.code === "auth/cancelled-popup-request") return;
       const box = $("#authError");
       box.textContent = e?.code === "auth/unauthorized-domain"
-        ? `This site's address isn't allowed in Firebase yet. Add "${location.hostname}" under Authentication → Settings → Authorized domains.`
-        : (e?.message || "Sign-in failed.");
+        ? `Bu sitenin adresi Firebase'de henüz izinli değil. Authentication → Settings → Authorized domains altına "${location.hostname}" ekleyin.`
+        : (e?.message || "Giriş yapılamadı.");
       box.hidden = false;
     }
   });
@@ -412,9 +412,9 @@ const activeStatusColumns = () =>
 
 async function addColumn() {
   const cols = [...activeStatusColumns()];
-  cols.push({ id: uid("col"), title: "New column", color: "#94a3b8" });
+  cols.push({ id: uid("col"), title: "Yeni sütun", color: "#94a3b8" });
   await store.saveBoard({ columns: cols });
-  store.logActivity("added a column");
+  store.logActivity("bir sütun ekledi");
 }
 
 async function renameColumn(id, text) {
@@ -425,20 +425,20 @@ async function renameColumn(id, text) {
   const old = col.title;
   col.title = title;
   await store.saveBoard({ columns: cols });
-  store.logActivity(`renamed column “${old}” to “${title}”`);
+  store.logActivity(`“${old}” sütununu “${title}” olarak değiştirdi`);
 }
 
 async function deleteColumn(id) {
   const cols = activeStatusColumns();
-  if (cols.length <= 1) return toast("A board needs at least one column.");
+  if (cols.length <= 1) return toast("Panoda en az bir sütun olmalı.");
   const inCol = state.cards.filter((c) => c.columnId === id);
   const col = cols.find((c) => c.id === id);
-  if (inCol.length && !confirm(`“${col.title}” holds ${inCol.length} card(s). They'll move to “${cols[0].id === id ? cols[1].title : cols[0].title}”. Continue?`)) return;
+  if (inCol.length && !confirm(`“${col.title}” sütununda ${inCol.length} görev var. Bunlar “${cols[0].id === id ? cols[1].title : cols[0].title}” sütununa taşınacak. Devam edilsin mi?`)) return;
 
   const fallback = cols.find((c) => c.id !== id).id;
   await Promise.all(inCol.map((c) => store.upsertCard({ ...c, columnId: fallback })));
   await store.saveBoard({ columns: cols.filter((c) => c.id !== id) });
-  store.logActivity(`deleted column “${col.title}”`);
+  store.logActivity(`“${col.title}” sütununu sildi`);
 }
 
 /* ============================================================
@@ -464,7 +464,7 @@ function openCard(id, seed = {}) {
 
   $("#deleteCardBtn").hidden = !card;
   $("#cardMeta").textContent = card
-    ? `Last updated ${fmtWhen(card.updatedAt)}${card.updatedBy ? ` by ${card.updatedBy}` : ""}`
+    ? `Son güncelleme ${fmtWhen(card.updatedAt)}${card.updatedBy ? ` · ${card.updatedBy}` : ""}`
     : "";
 
   dlg.showModal();
@@ -488,18 +488,18 @@ function wireCardDialog() {
 
     const card = existing ? { ...existing, ...patch } : makeCard({ ...patch, order: nextOrder(patch.columnId) });
     await store.upsertCard(card);
-    store.logActivity(existing ? `updated “${card.title}”` : `added “${card.title}”`);
+    store.logActivity(existing ? `“${card.title}” görevini güncelledi` : `“${card.title}” görevini ekledi`);
     $("#cardDialog").close();
-    toast(existing ? "Saved" : "Task added");
+    toast(existing ? "Kaydedildi" : "Görev eklendi");
   });
 
   $("#deleteCardBtn").addEventListener("click", async () => {
     const card = state.cards.find((c) => c.id === state.editingId);
-    if (!card || !confirm(`Delete “${card.title}”? This can't be undone.`)) return;
+    if (!card || !confirm(`“${card.title}” silinsin mi? Bu işlem geri alınamaz.`)) return;
     await store.deleteCard(card.id);
-    store.logActivity(`deleted “${card.title}”`);
+    store.logActivity(`“${card.title}” görevini sildi`);
     $("#cardDialog").close();
-    toast("Deleted");
+    toast("Silindi");
   });
 }
 
@@ -525,10 +525,10 @@ function renderAssignees() {
     ? names.map((n) => `<li>
         <span class="pip" style="background:${esc(colorFor(n))}">${esc(initials(n))}</span>
         <span>${esc(n)}</span>
-        <span class="role">${count(n)} ${count(n) === 1 ? "task" : "tasks"}</span>
-        <button class="icon-btn" data-drop-assignee="${esc(n)}" title="Remove from list" aria-label="Remove ${esc(n)}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <span class="role">${count(n)} görev</span>
+        <button class="icon-btn" data-drop-assignee="${esc(n)}" title="Listeden çıkar" aria-label="${esc(n)} kişisini çıkar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </li>`).join("")
-    : `<li class="muted small">No one yet — add the people you assign roles to.</li>`;
+    : `<li class="muted small">Henüz kimse yok — görev atadığınız kişileri ekleyin.</li>`;
 }
 
 function renderMembers() {
@@ -544,9 +544,9 @@ function renderMembers() {
     return `<li>
       <span class="pip" style="background:${esc(colorFor(label))}">${esc(initials(label))}</span>
       <span>${esc(label)}${m.name ? `<br><span class="muted small">${esc(m.email)}</span>` : ""}</span>
-      <span class="role">${isOwner ? "owner" : "member"}</span>
+      <span class="role">${isOwner ? "sahip" : "üye"}</span>
       ${!isOwner && me === owner
-        ? `<button class="icon-btn" data-remove="${esc(m.email)}" title="Remove" aria-label="Remove ${esc(label)}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
+        ? `<button class="icon-btn" data-remove="${esc(m.email)}" title="Çıkar" aria-label="${esc(label)} kişisini çıkar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
         : ""}
     </li>`;
   }).join("");
@@ -558,15 +558,15 @@ function wireMembersDialog() {
     const name = $("#assigneeName").value.trim().replace(/\s+/g, " ");
     if (!name) return;
     const assignees = [...(state.board.assignees || [])];
-    if (assignees.some((a) => a.toLowerCase() === name.toLowerCase())) return toast("Already on the list.");
+    if (assignees.some((a) => a.toLowerCase() === name.toLowerCase())) return toast("Zaten listede.");
     assignees.push(name);
     assignees.sort((a, b) => a.localeCompare(b));
     await store.saveBoard({ assignees });
-    store.logActivity(`added ${name} as an assignee`);
+    store.logActivity(`${name} kişisini sorumlu olarak ekledi`);
     $("#assigneeName").value = "";
     renderAssignees();
     refreshDatalists();
-    toast(`${name} added`);
+    toast(`${name} eklendi`);
   });
 
   $("#assigneeList").addEventListener("click", async (e) => {
@@ -574,12 +574,12 @@ function wireMembersDialog() {
     if (!name) return;
     const held = state.cards.filter((c) => c.owner === name).length;
     const warn = held
-      ? `${name} still owns ${held} task(s). They stay assigned and ${name} keeps showing as a column until you move them. Remove from the list anyway?`
-      : `Remove ${name} from the assignee list?`;
+      ? `${name} hâlâ ${held} görevin sorumlusu. Görevler onda kalır ve siz taşıyana kadar ${name} sütun olarak görünmeye devam eder. Yine de listeden çıkarılsın mı?`
+      : `${name} sorumlu listesinden çıkarılsın mı?`;
     if (!confirm(warn)) return;
     const assignees = (state.board.assignees || []).filter((a) => a !== name);
     await store.saveBoard({ assignees });
-    store.logActivity(`removed ${name} from the assignee list`);
+    store.logActivity(`${name} kişisini sorumlu listesinden çıkardı`);
     renderAssignees();
     refreshDatalists();
   });
@@ -589,21 +589,21 @@ function wireMembersDialog() {
     const email = $("#inviteEmail").value.trim().toLowerCase();
     if (!email) return;
     const members = [...(state.board.members || [])];
-    if (members.some((m) => m.email === email)) return toast("Already on the list.");
+    if (members.some((m) => m.email === email)) return toast("Zaten listede.");
     members.push({ email, name: "", role: "member" });
     await store.saveBoard({ members, allowedEmails: members.map((m) => m.email) });
-    store.logActivity(`gave ${email} access`);
+    store.logActivity(`${email} adresine erişim verdi`);
     $("#inviteEmail").value = "";
     renderMembers();
-    toast("Added — they can sign in with Google now.");
+    toast("Eklendi — artık Google ile giriş yapabilir.");
   });
 
   $("#memberList").addEventListener("click", async (e) => {
     const email = e.target.closest("[data-remove]")?.dataset.remove;
-    if (!email || !confirm(`Remove ${email} from this board?`)) return;
+    if (!email || !confirm(`${email} bu panodan çıkarılsın mı?`)) return;
     const members = (state.board.members || []).filter((m) => m.email !== email);
     await store.saveBoard({ members, allowedEmails: members.map((m) => m.email) });
-    store.logActivity(`removed ${email}`);
+    store.logActivity(`${email} adresini çıkardı`);
     renderMembers();
   });
 }
@@ -613,7 +613,7 @@ function wireMembersDialog() {
    ============================================================ */
 function exportCSV() {
   const colTitle = Object.fromEntries(activeStatusColumns().map((c) => [c.id, c.title]));
-  const rows = [["Task", "Owner", "Status", "Priority", "Due date", "Tags", "Notes", "Last updated"]];
+  const rows = [["Görev", "Sorumlu", "Durum", "Öncelik", "Termin", "Etiketler", "Notlar", "Son güncelleme"]];
   state.cards
     .slice()
     .sort((a, b) => (a.columnId || "").localeCompare(b.columnId || "") || (a.order ?? 0) - (b.order ?? 0))
@@ -623,7 +623,7 @@ function exportCSV() {
       c.updatedAt ? new Date(c.updatedAt).toISOString().slice(0, 10) : "",
     ]));
   downloadFile(`hr-board-${new Date().toISOString().slice(0, 10)}.csv`, "﻿" + toCSV(rows), "text/csv");
-  toast("CSV downloaded");
+  toast("CSV indirildi");
 }
 
 function exportJSON() {
@@ -632,7 +632,7 @@ function exportJSON() {
     JSON.stringify({ board: state.board, cards: state.cards }, null, 2),
     "application/json",
   );
-  toast("Backup downloaded");
+  toast("Yedek indirildi");
 }
 
 /* ============================================================
@@ -811,12 +811,12 @@ async function commitMove(cardId, targetKey, slot) {
     const owner = targetKey === "__none__" ? "" : targetKey;
     if (owner !== card.owner) {
       patch.owner = owner;
-      note = `moved \u201c${card.title}\u201d to ${owner || "Unassigned"}`;
+      note = `\u201c${card.title}\u201d görevini ${owner || "Atanmamış"} kişisine taşıdı`;
     }
   } else if (targetKey !== card.columnId) {
     patch.columnId = targetKey;
     const col = activeStatusColumns().find((c) => c.id === targetKey);
-    note = `moved \u201c${card.title}\u201d to ${col?.title || targetKey}`;
+    note = `\u201c${card.title}\u201d görevini ${col?.title || targetKey} sütununa taşıdı`;
   }
 
   await store.upsertCard({ ...card, ...patch });

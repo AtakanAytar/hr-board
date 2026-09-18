@@ -35,25 +35,27 @@ export function daysUntil(iso) {
   return Math.round((d - now) / 86400000);
 }
 
+export const LOCALE = "tr-TR";
+
 export function fmtDue(iso) {
   const n = daysUntil(iso);
   if (n === null) return { text: "", cls: "" };
   const nice = new Date(iso + "T00:00:00")
-    .toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  if (n < 0) return { text: `${nice} · ${Math.abs(n)}d late`, cls: "is-over" };
-  if (n === 0) return { text: `${nice} · today`, cls: "is-soon" };
-  if (n <= 7) return { text: `${nice} · ${n}d`, cls: "is-soon" };
+    .toLocaleDateString(LOCALE, { month: "short", day: "numeric" });
+  if (n < 0) return { text: `${nice} · ${Math.abs(n)} gün gecikti`, cls: "is-over" };
+  if (n === 0) return { text: `${nice} · bugün`, cls: "is-soon" };
+  if (n <= 7) return { text: `${nice} · ${n} gün`, cls: "is-soon" };
   return { text: nice, cls: "" };
 }
 
 export function fmtWhen(ms) {
   if (!ms) return "";
   const diff = (Date.now() - ms) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(ms).toLocaleDateString();
+  if (diff < 60) return "az önce";
+  if (diff < 3600) return `${Math.floor(diff / 60)} dk önce`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} sa önce`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} gün önce`;
+  return new Date(ms).toLocaleDateString(LOCALE);
 }
 
 export function debounce(fn, ms = 400) {

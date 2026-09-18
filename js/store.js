@@ -19,8 +19,8 @@
      store.logActivity(text)
      store.onActivity(cb)
 ------------------------------------------------------------------- */
-import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180901";
-import { uid, todayISO } from "./util.js?v=202609180901";
+import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180913";
+import { uid, todayISO } from "./util.js?v=202609180913";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
 
@@ -83,47 +83,47 @@ function demoStore() {
   }
 
   function seed() {
-    const b = emptyBoard("you@example.com");
+    const b = emptyBoard("siz@ornek.com");
     b.members = [
-      { email: "you@example.com", name: "You", role: "owner" },
-      { email: "deniz@example.com", name: "Deniz Arslan", role: "member" },
+      { email: "siz@ornek.com", name: "Sen", role: "owner" },
+      { email: "deniz@ornek.com", name: "Deniz Arslan", role: "member" },
     ];
     b.allowedEmails = b.members.map((m) => m.email);
-    /* Mert and Ayşe never sign in — they are just people work sits on. */
-    b.assignees = ["You", "Deniz Arslan", "Mert Çelik", "Ayşe Demir"];
+    /* Mert ve Ayşe hiç giriş yapmaz — yalnızca iş atanan kişilerdir. */
+    b.assignees = ["Sen", "Deniz Arslan", "Mert Çelik", "Ayşe Demir"];
     const day = (n) => {
       const d = new Date();
       d.setDate(d.getDate() + n);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     };
-    /* Hiring is just one kind of task here, alongside the rest of the work. */
+    /* İşe alım burada yalnızca görev türlerinden biri; diğer işlerin yanında durur. */
     const rows = [
-      ["Close Senior Backend Engineer role", "Deniz Arslan", "doing",   "high",   day(9),  ["hiring"]],
-      ["Run September payroll",              "You",          "doing",   "urgent", day(2),  ["payroll"]],
-      ["Onboard 3 new starters (Oct 1)",     "Ayşe Demir",   "todo",    "normal", day(13), ["onboarding"]],
-      ["Update remote work policy",          "Mert Çelik",   "todo",    "low",    "",      ["policy"]],
-      ["Q3 performance review cycle",        "Deniz Arslan", "blocked", "normal", day(-3), ["reviews", "waiting on leadership"]],
-      ["Renew health insurance contract",    "Mert Çelik",   "done",    "normal", day(-8), ["benefits"]],
+      ["Kıdemli Backend Geliştirici alımını tamamla", "Deniz Arslan", "doing",   "high",   day(9),  ["işe alım"]],
+      ["Eylül bordrosunu çalıştır",                   "Sen",          "doing",   "urgent", day(2),  ["bordro"]],
+      ["1 Ekim'de başlayan 3 kişinin oryantasyonu",   "Ayşe Demir",   "todo",    "normal", day(13), ["oryantasyon"]],
+      ["Uzaktan çalışma politikasını güncelle",       "Mert Çelik",   "todo",    "low",    "",      ["politika"]],
+      ["3. çeyrek performans değerlendirmeleri",      "Deniz Arslan", "blocked", "normal", day(-3), ["değerlendirme", "yönetim onayı bekliyor"]],
+      ["Sağlık sigortası sözleşmesini yenile",        "Mert Çelik",   "done",    "normal", day(-8), ["yan haklar"]],
     ];
     const cards = {};
     rows.forEach((r, i) => {
       const c = makeCard({
         title: r[0], owner: r[1], columnId: r[2], priority: r[3],
         dueDate: r[4], tags: r[5], order: (i + 1) * 1000,
-        notes: "", updatedBy: "Demo data",
+        notes: "", updatedBy: "Demo verisi",
       });
       cards[c.id] = c;
     });
     return {
       board: b,
       cards,
-      activity: [{ id: uid("a"), text: "Demo board created", who: "System", ts: Date.now() }],
+      activity: [{ id: uid("a"), text: "Demo pano oluşturuldu", who: "Sistem", ts: Date.now() }],
     };
   }
 
   return {
     mode: "demo",
-    user: { uid: "demo", name: "Demo user", email: "you@example.com", photo: "" },
+    user: { uid: "demo", name: "Demo kullanıcı", email: "siz@ornek.com", photo: "" },
     onAuth(cb) { setTimeout(() => cb(this.user), 0); },
     async signIn() {},
     async signOut() { location.reload(); },
@@ -137,7 +137,7 @@ function demoStore() {
     },
     async deleteCard(id) { delete state.cards[id]; persist(); },
     async logActivity(text) {
-      state.activity.unshift({ id: uid("a"), text, who: "You", ts: Date.now() });
+      state.activity.unshift({ id: uid("a"), text, who: "Sen", ts: Date.now() });
       state.activity = state.activity.slice(0, 200);
       persist();
     },
@@ -232,8 +232,8 @@ async function cloudStore() {
           } catch (e) {
             return api._err(e?.code === "permission-denied"
               ? { code: "not-founder", message:
-                  `This board hasn't been set up yet, and ${api.user.email} isn't the ` +
-                  "account allowed to set it up. The owner needs to sign in once first." }
+                  `Bu pano henüz kurulmamış ve ${api.user.email} panoyu kurma yetkisi olan ` +
+                  "hesap değil. Önce pano sahibinin bir kez giriş yapması gerekiyor." }
               : translate(e));
           }
         }
@@ -268,7 +268,7 @@ async function cloudStore() {
     async deleteCard(id) { await deleteDoc(doc(cardsRef, id)).catch((e) => api._err(translate(e))); },
 
     async logActivity(text) {
-      await addDoc(actRef, { text, who: api.user?.name || "someone", ts: Date.now() }).catch(() => {});
+      await addDoc(actRef, { text, who: api.user?.name || "biri", ts: Date.now() }).catch(() => {});
     },
   };
 
@@ -281,18 +281,18 @@ function translate(e) {
     return {
       code,
       message:
-        "This Google account isn't on the board's people list. " +
-        "Ask the board owner to add your email under “People → Board access”, " +
-        "then sign in again.",
+        "Bu Google hesabı panonun kişi listesinde değil. " +
+        "Pano sahibinden e-posta adresinizi “Kişiler → Pano erişimi” altına " +
+        "eklemesini isteyin, sonra tekrar giriş yapın.",
     };
   }
   if (code === "unavailable") {
-    return { code, message: "Can't reach the database — you appear to be offline. Changes will sync when you reconnect." };
+    return { code, message: "Veritabanına ulaşılamıyor — bağlantınız yok gibi görünüyor. Değişiklikler bağlandığınızda eşitlenecek." };
   }
   if (code === "failed-precondition") {
-    return { code, message: "Firestore isn't enabled on this Firebase project yet. Create the database in the Firebase console, then reload." };
+    return { code, message: "Bu Firebase projesinde Firestore henüz açık değil. Firebase konsolundan veritabanını oluşturup sayfayı yenileyin." };
   }
-  return { code, message: e?.message || "Something went wrong talking to the database." };
+  return { code, message: e?.message || "Veritabanıyla iletişimde bir sorun oluştu." };
 }
 
 export async function createStore() {

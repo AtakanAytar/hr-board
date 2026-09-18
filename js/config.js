@@ -25,10 +25,10 @@ export const firebaseConfig = {
 export const BOARD_ID = "hr";
 
 export const DEFAULT_COLUMNS = [
-  { id: "todo",    title: "To Do",       color: "#94a3b8" },
-  { id: "doing",   title: "In Progress", color: "#3b82f6" },
-  { id: "blocked", title: "Blocked",     color: "#f97316" },
-  { id: "done",    title: "Done",        color: "#16a34a" },
+  { id: "todo",    title: "Yapılacak",    color: "#94a3b8" },
+  { id: "doing",   title: "Devam ediyor", color: "#3b82f6" },
+  { id: "blocked", title: "Beklemede",    color: "#f97316" },
+  { id: "done",    title: "Tamamlandı",   color: "#16a34a" },
 ];
 
 const forcedDemo = new URLSearchParams(location.search).has("demo");
