@@ -2,10 +2,10 @@ rules_version = '2';
 
 /*  Access model
     ------------
-    A board document carries `ownerEmail` and `allowedEmails`.
-    Only signed-in Google accounts whose email is in `allowedEmails`
-    can read or write that board and its cards. Everyone else is
-    refused by the database, so an leaked URL is not a leaked board.
+    A board document carries `ownerEmail` and `allowedEmails`. Only signed-in
+    Google accounts listed in `allowedEmails` can read or write that board and
+    its cards. Everyone else is refused by the database, so a leaked URL is not
+    a leaked board.
 
     Paste this whole file into:
       Firebase console -> Firestore Database -> Rules -> Publish
@@ -21,30 +21,59 @@ service cloud.firestore {
       return request.auth.token.email.lower();
     }
 
-    function boardData(boardId) {
-      return get(/databases/$(database)/documents/boards/$(boardId)).data;
+    function boardPath(boardId) {
+      return /databases/$(database)/documents/boards/$(boardId);
+    }
+
+    function boardExists(boardId) {
+      return exists(boardPath(boardId));
     }
 
     function isMember(boardId) {
-      return signedIn() && myEmail() in boardData(boardId).allowedEmails;
+      return signedIn()
+             && boardExists(boardId)
+             && myEmail() in get(boardPath(boardId)).data.allowedEmails;
     }
 
     function isOwner(boardId) {
-      return signedIn() && boardData(boardId).ownerEmail == myEmail();
+      return signedIn()
+             && boardExists(boardId)
+             && get(boardPath(boardId)).data.ownerEmail == myEmail();
+    }
+
+    /*  WHO MAY CREATE THE BOARD IN THE FIRST PLACE.
+        --------------------------------------------
+        Put the intended owner's Google address here, in lower case.
+
+        Without this pin, "signed in" means any Google account in the world,
+        and whoever reaches an unclaimed board first becomes its permanent
+        owner. Recovering from that means deleting the document by hand.
+
+        Left as the placeholder, nobody can create the board — which is the
+        safe way to be wrong.                                              */
+    function isFounder() {
+      return signedIn() && myEmail() == "PUT_THE_OWNER_EMAIL_HERE";
     }
 
     match /boards/{boardId} {
 
-      // The first person to sign in creates the board and becomes its
-      // owner. They must put themselves on the allow list in the same write.
-      allow create: if signedIn()
+      /*  A board that does not exist yet must be readable by a signed-in
+          user, otherwise the app cannot tell "not created" apart from
+          "not allowed" and can never bootstrap itself. Reading a missing
+          document discloses nothing beyond whether the id is in use.     */
+      allow get: if isMember(boardId)
+                 || (signedIn() && !boardExists(boardId));
+
+      // Nobody enumerates the boards collection.
+      allow list: if false;
+
+      allow create: if isFounder()
                     && request.resource.data.ownerEmail == myEmail()
                     && myEmail() in request.resource.data.allowedEmails;
 
-      allow read: if isMember(boardId);
-
-      // Members may rename the board and edit columns. Only the owner may
-      // change who has access, and nobody may hand the board to someone else.
+      /*  Members may rename the board and edit columns. Only the owner may
+          change who has access, and the board can never be handed to
+          someone else.                                                    */
       allow update: if isMember(boardId)
                     && request.resource.data.ownerEmail == resource.data.ownerEmail
                     && (request.resource.data.allowedEmails == resource.data.allowedEmails

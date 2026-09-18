@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609180310";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180310";
+import { createStore, makeCard } from "./store.js?v=202609180331";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180331";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609180310";
+} from "./util.js?v=202609180331";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -85,6 +85,14 @@ function showBlockingError(message) {
   const box = $("#authError");
   box.textContent = message;
   box.hidden = false;
+  /* Signing in with the wrong Google account is the likeliest cause, and
+     it is invisible unless the address is spelled out. */
+  const who = store.user?.email;
+  if (who) {
+    $("#signedInAs").textContent = `Signed in as ${who}`;
+    $("#signedInAs").hidden = false;
+    $("#signOutLink").hidden = false;
+  }
 }
 
 function paintUser(user) {
@@ -263,6 +271,8 @@ function wireChrome() {
       box.hidden = false;
     }
   });
+
+  $("#signOutLink").addEventListener("click", () => store.signOut().then(() => location.reload()));
 
   $("#demoBtn").addEventListener("click", () => {
     location.href = location.pathname + "?demo=1";

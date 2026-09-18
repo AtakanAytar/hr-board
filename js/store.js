@@ -19,8 +19,8 @@
      store.logActivity(text)
      store.onActivity(cb)
 ------------------------------------------------------------------- */
-import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180310";
-import { uid, todayISO } from "./util.js?v=202609180310";
+import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180331";
+import { uid, todayISO } from "./util.js?v=202609180331";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
 
@@ -217,16 +217,25 @@ async function cloudStore() {
     async open(cb) {
       api._data = cb;
 
-      /* Bootstrap: the very first person to sign in creates the board
-         and becomes its owner. Everyone else must be invited. */
+      /* Bootstrap. Only the founder named in firestore.rules can create the
+         board; everyone else must be added to it afterwards. The two failure
+         modes read very differently to a person, so keep them apart. */
       try {
         const snap = await getDoc(boardRef);
         if (!snap.exists()) {
-          await setDoc(boardRef, {
-            ...emptyBoard(api.user.email),
-            assignees: api.user.name ? [api.user.name] : [],
-            members: [{ email: api.user.email, name: api.user.name, role: "owner" }],
-          });
+          try {
+            await setDoc(boardRef, {
+              ...emptyBoard(api.user.email),
+              assignees: api.user.name ? [api.user.name] : [],
+              members: [{ email: api.user.email, name: api.user.name, role: "owner" }],
+            });
+          } catch (e) {
+            return api._err(e?.code === "permission-denied"
+              ? { code: "not-founder", message:
+                  `This board hasn't been set up yet, and ${api.user.email} isn't the ` +
+                  "account allowed to set it up. The owner needs to sign in once first." }
+              : translate(e));
+          }
         }
       } catch (e) {
         return api._err(translate(e));
@@ -272,8 +281,9 @@ function translate(e) {
     return {
       code,
       message:
-        "This Google account isn't on the board's people list yet. " +
-        "Ask the board owner to add your email under “People & access”, then sign in again.",
+        "This Google account isn't on the board's people list. " +
+        "Ask the board owner to add your email under “People → Board access”, " +
+        "then sign in again.",
     };
   }
   if (code === "unavailable") {

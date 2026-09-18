@@ -69,8 +69,22 @@ team (`eur3` for Europe) → start in **production mode**.
 Open the **Rules** tab, replace everything with the contents of
 [`firestore.rules`](firestore.rules), and click **Publish**.
 
-This is what actually protects the board: only the email addresses on the
-board's people list can read or write it, no matter who has the link.
+**Before publishing, set the founder email.** Near the top of the file:
+
+```
+function isFounder() {
+  return signedIn() && myEmail() == "PUT_THE_OWNER_EMAIL_HERE";
+}
+```
+
+Put the intended owner's Google address there, lower case. Only that account
+can bring the board into existence. Without the pin, "signed in" means any
+Google account in the world and the first arrival at an unclaimed board becomes
+its permanent owner — recoverable only by deleting the document by hand. Left
+as the placeholder, nobody can create the board, which is the safe failure.
+
+The rules are what actually protect the board: only addresses on its people
+list can read or write it, no matter who has the link.
 
 ### 5. Register the web app and copy the config
 
@@ -120,6 +134,21 @@ runs directly. Nothing to reinstall or re-deploy when tooling moves on.
 
 Title, owner, status, priority, due date, tags, notes. Deliberately little —
 add fields when you actually miss them, not in advance.
+
+### Who can get in
+
+| Situation | What happens |
+|---|---|
+| Not signed in | Refused. Verified: an anonymous REST read of the board and of the whole collection both return `PERMISSION_DENIED`. |
+| Signed in, not on the list | Refused by the database on every board and card read. The app says so plainly and offers to switch account. |
+| Signed in, on the list | Full access to this board. |
+| Board not created yet, not the founder | Refused, with a message saying the board isn't set up rather than blaming the visitor. |
+
+Anyone who clicks sign-in does get a row in **Authentication → Users** even when
+refused. That is an identity record, not access; delete the row if you like.
+
+To revoke someone: **People → Board access → ×**. They lose access on their next
+read, which for an open tab is immediate.
 
 ### Deploying an update
 

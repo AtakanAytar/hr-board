@@ -13,5 +13,6 @@ perl -pi -e "s{(src=\"js/app\.js)(\?v=[^\"]*)?\"}{\$1?v=$V\"}g"                i
 perl -pi -e "s{(from \"\./(?:store|config|util)\.js)(\?v=[^\"]*)?\"}{\$1?v=$V\"}g" js/*.js
 perl -pi -e "s{(import\(\`\\\$\{SDK\}/firebase-[a-z]+\.js)(\?v=[^\`]*)?\`\)}{\$1\`)}g" js/store.js
 
+python3 ./preflight.py
 echo "stamped v=$V"
 grep -n "?v=$V" index.html js/*.js | sed 's/^/  /'
