@@ -121,6 +121,19 @@ runs directly. Nothing to reinstall or re-deploy when tooling moves on.
 Title, owner, status, priority, due date, tags, notes. Deliberately little —
 add fields when you actually miss them, not in advance.
 
+### Deploying an update
+
+```bash
+./bump.sh && git commit -am "what changed" && git push
+```
+
+`bump.sh` stamps a fresh `?v=` on every asset URL. Without it a returning
+visitor can run a cached older script against freshly deployed markup for as
+long as the CDN cache lasts, which is how you get a blank page that fixes
+itself in ten minutes and is miserable to debug. The rendering code is also
+written to skip a missing element rather than throw, so a mismatch costs you
+one widget instead of the whole board.
+
 ### Card ordering
 
 Each card holds a numeric `order`. Dropping a card between two others sets its

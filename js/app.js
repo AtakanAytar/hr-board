@@ -1,12 +1,22 @@
-import { createStore, makeCard } from "./store.js";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js";
+import { createStore, makeCard } from "./store.js?v=202609180305";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180305";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js";
+} from "./util.js?v=202609180305";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+/* Write into an element only if it is actually there. A browser can end up
+   running a cached older script against newer markup (or vice versa) for as
+   long as the CDN cache lasts; when that happens the page should lose one
+   widget, not throw on boot and render nothing at all. */
+function setHTML(sel, html) {
+  const el = $(sel);
+  if (el) el.innerHTML = html;
+  return !!el;
+}
 
 /* ============================================================
    State
@@ -220,22 +230,21 @@ function cardHTML(c) {
 }
 
 function renderOwnerFilterChips() {
-  const wrap = $("#ownerChips");
   const owners = allOwners();
-  wrap.innerHTML =
+  setHTML("#ownerChips",
     owners.map((o) => `<button class="chip${state.filters.owners.has(o) ? " is-on" : ""}" data-owner="${esc(o)}">${esc(o)}</button>`).join("") +
-    `<button class="chip${state.filters.owners.has("__none__") ? " is-on" : ""}" data-owner="__none__">Unassigned</button>`;
+    `<button class="chip${state.filters.owners.has("__none__") ? " is-on" : ""}" data-owner="__none__">Unassigned</button>`);
 }
 
 function refreshDatalists() {
-  $("#ownerList").innerHTML = allOwners().map((o) => `<option value="${esc(o)}">`).join("");
-  $("#tagList").innerHTML = allTags().map((t) => `<option value="${esc(t)}">`).join("");
+  setHTML("#ownerList", allOwners().map((o) => `<option value="${esc(o)}">`).join(""));
+  setHTML("#tagList", allTags().map((t) => `<option value="${esc(t)}">`).join(""));
 }
 
 function renderActivity(items) {
-  $("#activityList").innerHTML = (items || []).length
+  setHTML("#activityList", (items || []).length
     ? items.map((a) => `<li>${esc(a.text)} <em class="muted">— ${esc(a.who || "")}</em><time>${esc(fmtWhen(a.ts))}</time></li>`).join("")
-    : `<li class="muted">Nothing yet.</li>`;
+    : `<li class="muted">Nothing yet.</li>`);
 }
 
 /* ============================================================
