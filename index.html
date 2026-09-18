@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="A free, real-time HR board for tracking open roles and who owns each one.">
+<meta name="description" content="A free, real-time task board for HR teams — who is doing what, and where it stands.">
 <title>HR Board</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
   <div class="auth-card">
     <div class="auth-mark">🗂️</div>
     <h1>HR Board</h1>
-    <p class="auth-sub">Track every open role and who's driving it.</p>
+    <p class="auth-sub">Who's doing what, and where it stands.</p>
     <button id="signInBtn" class="btn btn-google">
       <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
         <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/>
@@ -46,7 +46,7 @@
 
     <div class="topbar-search">
       <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="search" type="search" placeholder="Search roles, owners, tags…" autocomplete="off" aria-label="Search cards">
+      <input id="search" type="search" placeholder="Search tasks, owners, tags…" autocomplete="off" aria-label="Search cards">
     </div>
 
     <div class="topbar-right">
@@ -119,7 +119,7 @@
 <dialog id="cardDialog" class="dialog">
   <form id="cardForm" method="dialog">
     <header class="dlg-head">
-      <input id="f_title" class="dlg-title-input" name="title" placeholder="Role title — e.g. Senior Backend Engineer" required maxlength="120" autocomplete="off">
+      <input id="f_title" class="dlg-title-input" name="title" placeholder="What needs doing?" required maxlength="140" autocomplete="off">
       <button type="button" class="icon-btn" data-close aria-label="Close">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -129,7 +129,7 @@
       <div class="field-grid">
         <label class="field">
           <span>Owner</span>
-          <input id="f_owner" name="owner" list="ownerList" placeholder="Who's driving this?" autocomplete="off">
+          <input id="f_owner" name="owner" list="ownerList" placeholder="Who's doing this?" autocomplete="off">
           <datalist id="ownerList"></datalist>
         </label>
         <label class="field">
@@ -146,36 +146,20 @@
           </select>
         </label>
         <label class="field">
-          <span>Target date</span>
+          <span>Due date</span>
           <input id="f_due" name="dueDate" type="date">
-        </label>
-        <label class="field">
-          <span>Department</span>
-          <input id="f_dept" name="department" list="deptList" placeholder="Engineering" autocomplete="off">
-          <datalist id="deptList"></datalist>
-        </label>
-        <label class="field">
-          <span>Location</span>
-          <input id="f_location" name="location" placeholder="Istanbul / Remote" autocomplete="off">
-        </label>
-        <label class="field">
-          <span>Openings</span>
-          <input id="f_openings" name="openings" type="number" min="1" max="999" value="1">
-        </label>
-        <label class="field">
-          <span>Candidates in pipeline</span>
-          <input id="f_candidates" name="candidates" type="number" min="0" max="9999" value="0">
         </label>
       </div>
 
       <label class="field">
         <span>Tags <em class="muted">comma separated</em></span>
-        <input id="f_tags" name="tags" placeholder="backlog, referral, agency" autocomplete="off">
+        <input id="f_tags" name="tags" list="tagList" placeholder="hiring, payroll, onboarding" autocomplete="off">
+        <datalist id="tagList"></datalist>
       </label>
 
       <label class="field">
         <span>Notes</span>
-        <textarea id="f_notes" name="notes" rows="4" placeholder="Hiring manager, comp band, blockers…"></textarea>
+        <textarea id="f_notes" name="notes" rows="4" placeholder="Context, links, blockers…"></textarea>
       </label>
 
       <p id="cardMeta" class="card-meta muted"></p>

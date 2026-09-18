@@ -104,8 +104,8 @@ function allOwners() {
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
-const departments = () =>
-  [...new Set(state.cards.map((c) => c.department).filter(Boolean))].sort();
+const allTags = () =>
+  [...new Set(state.cards.flatMap((c) => c.tags || []))].sort((a, b) => a.localeCompare(b));
 
 function visibleCards() {
   const q = state.search.trim().toLowerCase();
@@ -119,8 +119,7 @@ function visibleCards() {
       if (d === null || d >= 0) return false;
     }
     if (q) {
-      const hay = [c.title, c.owner, c.department, c.location, c.notes, (c.tags || []).join(" ")]
-        .join(" ").toLowerCase();
+      const hay = [c.title, c.owner, c.notes, (c.tags || []).join(" ")].join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -179,7 +178,6 @@ function render() {
 }
 
 function columnHTML(col, cards) {
-  const openings = cards.reduce((s, c) => s + (Number(c.openings) || 0), 0);
   const editable = col.kind === "status";
   return `
   <section class="column" data-col="${esc(col.key)}" data-kind="${col.kind}">
@@ -188,7 +186,6 @@ function columnHTML(col, cards) {
       <span class="col-name" ${editable ? 'contenteditable="true" spellcheck="false"' : ""}
             data-col-name="${esc(col.key)}">${esc(col.title)}</span>
       <span class="col-count">${cards.length}</span>
-      ${openings > cards.length ? `<span class="col-openings">${openings} seats</span>` : ""}
       <span class="spacer"></span>
       ${editable ? `<button class="icon-btn" data-act="del-column" data-col="${esc(col.key)}" title="Delete column" aria-label="Delete column">
         <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>` : ""}
@@ -197,7 +194,7 @@ function columnHTML(col, cards) {
       ${cards.map(cardHTML).join("")}
     </div>
     <div class="col-foot">
-      <button class="add-card" data-act="add-card" data-col="${esc(col.key)}">+ Add a role</button>
+      <button class="add-card" data-act="add-card" data-col="${esc(col.key)}">+ Add a task</button>
     </div>
   </section>`;
 }
@@ -205,16 +202,10 @@ function columnHTML(col, cards) {
 function cardHTML(c) {
   const due = fmtDue(c.dueDate);
   const tags = (c.tags || []).slice(0, 4);
-  const sub = [];
-  if (c.department) sub.push(`<span>🏷️ ${esc(c.department)}</span>`);
-  if (c.location) sub.push(`<span>📍 ${esc(c.location)}</span>`);
-  if (Number(c.openings) > 1) sub.push(`<span>× ${Number(c.openings)} openings</span>`);
-  if (Number(c.candidates) > 0) sub.push(`<span>👥 ${Number(c.candidates)} in pipeline</span>`);
 
   return `
   <article class="card" data-id="${esc(c.id)}" data-priority="${esc(c.priority || "normal")}" tabindex="0">
-    <div class="card-title">${esc(c.title || "Untitled role")}</div>
-    ${sub.length ? `<div class="card-sub">${sub.join("")}</div>` : ""}
+    <div class="card-title">${esc(c.title || "Untitled task")}</div>
     ${tags.length ? `<div class="card-tags">${tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
     <div class="card-foot">
       <span class="who">
@@ -238,7 +229,7 @@ function renderOwnerFilterChips() {
 
 function refreshDatalists() {
   $("#ownerList").innerHTML = allOwners().map((o) => `<option value="${esc(o)}">`).join("");
-  $("#deptList").innerHTML = departments().map((d) => `<option value="${esc(d)}">`).join("");
+  $("#tagList").innerHTML = allTags().map((t) => `<option value="${esc(t)}">`).join("");
 }
 
 function renderActivity(items) {
@@ -449,10 +440,6 @@ function openCard(id, seed = {}) {
   $("#f_column").value = d.columnId || activeStatusColumns()[0].id;
   $("#f_priority").value = d.priority || "normal";
   $("#f_due").value = d.dueDate || "";
-  $("#f_dept").value = d.department || "";
-  $("#f_location").value = d.location || "";
-  $("#f_openings").value = d.openings ?? 1;
-  $("#f_candidates").value = d.candidates ?? 0;
   $("#f_tags").value = (d.tags || []).join(", ");
   $("#f_notes").value = d.notes || "";
 
@@ -475,10 +462,6 @@ function wireCardDialog() {
       columnId: $("#f_column").value,
       priority: $("#f_priority").value,
       dueDate: $("#f_due").value,
-      department: $("#f_dept").value.trim(),
-      location: $("#f_location").value.trim(),
-      openings: Math.max(1, Number($("#f_openings").value) || 1),
-      candidates: Math.max(0, Number($("#f_candidates").value) || 0),
       tags: parseTags($("#f_tags").value),
       notes: $("#f_notes").value.trim(),
     };
@@ -488,7 +471,7 @@ function wireCardDialog() {
     await store.upsertCard(card);
     store.logActivity(existing ? `updated “${card.title}”` : `added “${card.title}”`);
     $("#cardDialog").close();
-    toast(existing ? "Saved" : "Role added");
+    toast(existing ? "Saved" : "Task added");
   });
 
   $("#deleteCardBtn").addEventListener("click", async () => {
@@ -523,7 +506,7 @@ function renderAssignees() {
     ? names.map((n) => `<li>
         <span class="pip" style="background:${esc(colorFor(n))}">${esc(initials(n))}</span>
         <span>${esc(n)}</span>
-        <span class="role">${count(n)} ${count(n) === 1 ? "role" : "roles"}</span>
+        <span class="role">${count(n)} ${count(n) === 1 ? "task" : "tasks"}</span>
         <button class="icon-btn" data-drop-assignee="${esc(n)}" title="Remove from list" aria-label="Remove ${esc(n)}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </li>`).join("")
     : `<li class="muted small">No one yet — add the people you assign roles to.</li>`;
@@ -572,7 +555,7 @@ function wireMembersDialog() {
     if (!name) return;
     const held = state.cards.filter((c) => c.owner === name).length;
     const warn = held
-      ? `${name} still owns ${held} role(s). They stay assigned and ${name} keeps showing as a column until you move them. Remove from the list anyway?`
+      ? `${name} still owns ${held} task(s). They stay assigned and ${name} keeps showing as a column until you move them. Remove from the list anyway?`
       : `Remove ${name} from the assignee list?`;
     if (!confirm(warn)) return;
     const assignees = (state.board.assignees || []).filter((a) => a !== name);
@@ -611,16 +594,12 @@ function wireMembersDialog() {
    ============================================================ */
 function exportCSV() {
   const colTitle = Object.fromEntries(activeStatusColumns().map((c) => [c.id, c.title]));
-  const rows = [[
-    "Role", "Owner", "Status", "Priority", "Department", "Location",
-    "Openings", "Candidates", "Target date", "Tags", "Notes", "Last updated",
-  ]];
+  const rows = [["Task", "Owner", "Status", "Priority", "Due date", "Tags", "Notes", "Last updated"]];
   state.cards
     .slice()
     .sort((a, b) => (a.columnId || "").localeCompare(b.columnId || "") || (a.order ?? 0) - (b.order ?? 0))
     .forEach((c) => rows.push([
-      c.title, c.owner, colTitle[c.columnId] || c.columnId, c.priority,
-      c.department, c.location, c.openings, c.candidates, c.dueDate,
+      c.title, c.owner, colTitle[c.columnId] || c.columnId, c.priority, c.dueDate,
       (c.tags || []).join("; "), c.notes,
       c.updatedAt ? new Date(c.updatedAt).toISOString().slice(0, 10) : "",
     ]));

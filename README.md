@@ -1,12 +1,13 @@
 # HR Board
 
-A free, real-time kanban board for tracking open roles and who owns each one.
+A free, real-time task board for an HR team — who is doing what, and where it
+stands.
 
-Built for an HR lead who needs to see, at a glance, which jobs are moving,
-which are stuck, and whose plate each one is sitting on.
+Every card is just a task. Hiring is one kind of task alongside payroll,
+onboarding, policy work and reviews; tag it `hiring` if you want to filter on it.
 
 - **Status view** — To Do / In Progress / Blocked / Done (rename or add your own)
-- **By person view** — one column per recruiter; drag a card onto someone to reassign it
+- **By person view** — one column per person; drag a card onto someone to reassign it
 - **Live sync** — everyone on the board sees changes instantly, on any device
 - **Real access control** — the database itself refuses anyone not on the people list
 - **Works offline** — changes queue up and sync when the connection returns
@@ -19,10 +20,10 @@ The **People** dialog keeps two separate lists, and this distinction matters:
 
 | | Who belongs here | Needs a Google account? |
 |---|---|---|
-| **Assignees** | Anyone you track work for — hiring managers, agency contacts, people who will never touch the board | **No.** Just a name. |
+| **Assignees** | Anyone you track work for — managers, agency contacts, people who will never touch the board | **No.** Just a name. |
 | **Board access** | People who actually open the board and move cards | Yes — they sign in with Google. |
 
-So you can run a board for fifteen hiring managers where only you ever log in.
+So you can run a board covering fifteen people where only you ever log in.
 Assignees show up as columns in **By person** and as options in the Owner field;
 the Owner field is also free text, so you can type a name that is on neither list
 and it just works.
@@ -40,7 +41,7 @@ python3 -m http.server 8777
 ```
 
 Open <http://localhost:8777/?demo=1>. That's **demo mode**: fully functional,
-seeded with sample roles, saved only in your own browser. Nothing is shared.
+seeded with sample tasks, saved only in your own browser. Nothing is shared.
 
 ---
 
@@ -114,6 +115,11 @@ firestore.rules database-enforced access control
 
 No build step, no dependencies, no framework — plain ES modules the browser
 runs directly. Nothing to reinstall or re-deploy when tooling moves on.
+
+### What a card holds
+
+Title, owner, status, priority, due date, tags, notes. Deliberately little —
+add fields when you actually miss them, not in advance.
 
 ### Card ordering
 

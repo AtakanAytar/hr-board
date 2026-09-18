@@ -45,10 +45,6 @@ export function makeCard(patch = {}) {
     owner: "",
     columnId: DEFAULT_COLUMNS[0].id,
     priority: "normal",
-    department: "",
-    location: "",
-    openings: 1,
-    candidates: 0,
     dueDate: "",
     tags: [],
     notes: "",
@@ -100,20 +96,20 @@ function demoStore() {
       d.setDate(d.getDate() + n);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     };
+    /* Hiring is just one kind of task here, alongside the rest of the work. */
     const rows = [
-      ["Senior Backend Engineer", "Deniz Arslan", "doing",   "high",   "Engineering", "Istanbul / Hybrid", 2, 14, day(9),  ["referral"]],
-      ["Product Designer",        "Mert Çelik",   "todo",    "normal", "Design",      "Remote",            1, 0,  day(24), ["portfolio"]],
-      ["Payroll Specialist",      "You",          "doing",   "urgent", "People Ops",  "Istanbul",          1, 6,  day(2),  ["backfill"]],
-      ["Data Analyst",            "Deniz Arslan", "blocked", "normal", "Analytics",   "Ankara",            1, 3,  day(-3), ["budget hold"]],
-      ["Customer Success Lead",   "",             "todo",    "low",    "Revenue",     "Remote",            1, 0,  "",      []],
-      ["QA Engineer",             "Mert Çelik",   "done",    "normal", "Engineering", "Izmir",             1, 11, day(-8), ["closed"]],
+      ["Close Senior Backend Engineer role", "Deniz Arslan", "doing",   "high",   day(9),  ["hiring"]],
+      ["Run September payroll",              "You",          "doing",   "urgent", day(2),  ["payroll"]],
+      ["Onboard 3 new starters (Oct 1)",     "Ayşe Demir",   "todo",    "normal", day(13), ["onboarding"]],
+      ["Update remote work policy",          "Mert Çelik",   "todo",    "low",    "",      ["policy"]],
+      ["Q3 performance review cycle",        "Deniz Arslan", "blocked", "normal", day(-3), ["reviews", "waiting on leadership"]],
+      ["Renew health insurance contract",    "Mert Çelik",   "done",    "normal", day(-8), ["benefits"]],
     ];
     const cards = {};
     rows.forEach((r, i) => {
       const c = makeCard({
         title: r[0], owner: r[1], columnId: r[2], priority: r[3],
-        department: r[4], location: r[5], openings: r[6], candidates: r[7],
-        dueDate: r[8], tags: r[9], order: (i + 1) * 1000,
+        dueDate: r[4], tags: r[5], order: (i + 1) * 1000,
         notes: "", updatedBy: "Demo data",
       });
       cards[c.id] = c;
