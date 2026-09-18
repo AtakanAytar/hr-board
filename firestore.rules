@@ -29,10 +29,33 @@ service cloud.firestore {
       return exists(boardPath(boardId));
     }
 
+    /*  STANDING TEAM ALLOW LIST.
+        ------------------------
+        These addresses can open and edit the board by signing in, without
+        the owner adding them through the People dialog first.
+
+        Real addresses are never committed — this repository is public.
+        Generate the file to publish with:
+            ./owner-rules.sh owner@example.com member@example.com ...
+
+        The placeholder matches nobody, so an unedited file grants nothing. */
+    function teamEmails() {
+      return ["PUT_TEAM_EMAILS_HERE"];
+    }
+
+    function isTeam() {
+      return signedIn() && myEmail() in teamEmails();
+    }
+
+    /*  Two independent ways in: the standing list above, or the board's own
+        allowedEmails, which the owner edits from the People dialog. The list
+        needs no console visit to use; the dialog needs no console visit to
+        change. Either is sufficient.                                       */
     function isMember(boardId) {
-      return signedIn()
-             && boardExists(boardId)
-             && myEmail() in get(boardPath(boardId)).data.allowedEmails;
+      return isTeam()
+             || (signedIn()
+                 && boardExists(boardId)
+                 && myEmail() in get(boardPath(boardId)).data.allowedEmails);
     }
 
     function isOwner(boardId) {

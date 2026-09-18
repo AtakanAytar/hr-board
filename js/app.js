@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609180953";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180953";
+import { createStore, makeCard } from "./store.js?v=202609181011";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609181011";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609180953";
+} from "./util.js?v=202609181011";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -655,16 +655,34 @@ function wireMembersDialog() {
 
   $("#inviteForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = $("#inviteEmail").value.trim().toLowerCase();
-    if (!email) return;
+
+    /* Accept a pasted list, not just one address — adding a team one field
+       submission at a time is four chances to mistype and give up. */
+    const raw = $("#inviteEmail").value;
+    const entered = raw
+      .split(/[,;\s]+/)
+      .map((x) => x.trim().toLowerCase())
+      .filter(Boolean);
+    if (!entered.length) return;
+
+    const bad = entered.filter((x) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+    if (bad.length) return toast(`Geçersiz adres: ${bad[0]}`);
+
     const members = [...(state.board.members || [])];
-    if (members.some((m) => m.email === email)) return toast("Zaten listede.");
-    members.push({ email, name: "", role: "member" });
+    const have = new Set(members.map((m) => m.email));
+    const added = entered.filter((x) => !have.has(x));
+    if (!added.length) return toast("Hepsi zaten listede.");
+
+    added.forEach((email) => members.push({ email, name: "", role: "member" }));
     await store.saveBoard({ members, allowedEmails: members.map((m) => m.email) });
-    store.logActivity(`${email} adresine erişim verdi`);
+    store.logActivity(added.length === 1
+      ? `${added[0]} adresine erişim verdi`
+      : `${added.length} kişiye erişim verdi: ${added.join(", ")}`);
     $("#inviteEmail").value = "";
     renderMembers();
-    toast("Eklendi — artık Google ile giriş yapabilir.");
+    toast(added.length === 1
+      ? "Eklendi — artık Google ile giriş yapabilir."
+      : `${added.length} kişi eklendi — Google ile giriş yapabilirler.`);
   });
 
   $("#memberList").addEventListener("click", async (e) => {

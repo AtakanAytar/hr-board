@@ -80,9 +80,28 @@ function isFounder() {
 Put the intended owner's address there, lower case — that account is the only
 one that can bring the board into existence.
 
-Keep the real address out of this repo if it is public. `./owner-rules.sh
-someone@example.com` writes `firestore.rules.local`, which is gitignored, with
-the address filled in and ready to paste into the console. Only that account
+Keep real addresses out of this repo if it is public. Generate the file to
+publish instead:
+
+```bash
+./owner-rules.sh owner@example.com teammate@example.com another@example.com
+```
+
+That writes `firestore.rules.local` — gitignored — with the first address as
+owner and every listed address on the standing team allow list. Paste it into
+the console.
+
+There are two independent ways someone gets access:
+
+| | Changed by | Needs a console visit |
+|---|---|---|
+| Standing list in the rules | editing and republishing the rules | yes |
+| `allowedEmails` on the board | the owner, in **Kişiler → Pano erişimi** | no |
+
+Either is sufficient on its own. The dialog is self-service and shows who has
+access; the rules list works before anyone has signed in and needs no owner
+present. People granted through the rules will not appear in the dialog's list,
+because the app cannot read the rules. Only that account
 can bring the board into existence. Without the pin, "signed in" means any
 Google account in the world and the first arrival at an unclaimed board becomes
 its permanent owner — recoverable only by deleting the document by hand. Left
