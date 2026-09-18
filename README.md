@@ -98,14 +98,16 @@ generator expands every Gmail address into all the forms it can arrive as, so a
 teammate is not locked out by a dot. Non-Gmail domains are left alone, because
 there dots are significant.
 
-There are two independent ways someone gets access:
+Three things grant access, any one sufficient:
 
-| | Changed by | Needs a console visit |
-|---|---|---|
-| Standing list in the rules | editing and republishing the rules | yes |
-| `allowedEmails` on the board | the owner, in **Kişiler → Pano erişimi** | no |
+| | Who it covers | Changed by | Needs the console |
+|---|---|---|---|
+| `ownerEmails` | the owner alone | republishing the rules | yes |
+| `teamEmails` | everyone else on the standing list | republishing the rules | yes |
+| `allowedEmails` | anyone the owner invites | the owner, in **Kişiler → Pano erişimi** | no |
 
-Either is sufficient on its own. The dialog is self-service and shows who has
+The owner is a member by virtue of `ownerEmails` and is deliberately absent from
+`teamEmails`: each list means one thing, and no address is written twice. The dialog is self-service and shows who has
 access; the rules list works before anyone has signed in and needs no owner
 present. People granted through the rules will not appear in the dialog's list,
 because the app cannot read the rules. Only that account

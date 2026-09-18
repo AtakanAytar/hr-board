@@ -31,8 +31,9 @@ service cloud.firestore {
 
     /*  STANDING TEAM ALLOW LIST.
         ------------------------
-        These addresses can open and edit the board by signing in, without
-        the owner adding them through the People dialog first.
+        Everyone except the owner. These addresses can open and edit the
+        board by signing in, without being added through the People dialog
+        first. The owner is covered by ownerEmails and does not belong here.
 
         Gmail ignores dots and +tags, so one mailbox has several spellings
         and Firebase reports whichever the account was registered with. The
@@ -51,12 +52,17 @@ service cloud.firestore {
       return signedIn() && myEmail() in teamEmails();
     }
 
-    /*  Two independent ways in: the standing list above, or the board's own
-        allowedEmails, which the owner edits from the People dialog. The list
-        needs no console visit to use; the dialog needs no console visit to
-        change. Either is sufficient.                                       */
+    /*  Three ways in, any one sufficient:
+          the owner, who is never not a member of their own board;
+          the standing team list, which works before anyone invites you;
+          the board's own allowedEmails, which the owner edits in the People
+          dialog without visiting the console.
+
+        The owner is covered here rather than being repeated in teamEmails, so
+        each list means exactly one thing and no address appears twice.     */
     function isMember(boardId) {
-      return isTeam()
+      return isFounder()
+             || isTeam()
              || (signedIn()
                  && boardExists(boardId)
                  && myEmail() in get(boardPath(boardId)).data.allowedEmails);

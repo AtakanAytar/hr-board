@@ -39,26 +39,32 @@ for raw in args:
         seen.add(e)
         given.append(e)
 
+# The owner is authorised as the owner, not as one more team member, so the
+# two lists stay disjoint and no address is written twice.
 owner_forms = variants(given[0])
+owned = set(owner_forms)
 emails, seen = [], set()
-for g in given:
+for g in given[1:]:
     for v in variants(g):
-        if v not in seen:
+        if v not in seen and v not in owned:
             seen.add(v)
             emails.append(v)
 rules = (root / "firestore.rules").read_text()
 if "PUT_THE_OWNER_EMAIL_HERE" not in rules or '"PUT_TEAM_EMAILS_HERE"' not in rules:
     sys.exit("firestore.rules is missing its placeholders — did it get overwritten?")
 
-fmt = lambda xs: ",\n        ".join(f'"{e}"' for e in xs)
+def fmt(xs):
+    return ",\n        ".join(f'"{e}"' for e in xs) if xs else ""
 out = (rules
        .replace('"PUT_THE_OWNER_EMAIL_HERE"', fmt(owner_forms))
        .replace('"PUT_TEAM_EMAILS_HERE"', fmt(emails)))
 
 # never ship a file that silently granted nothing, or kept a placeholder
 assert "PUT_" not in out, "a placeholder survived substitution"
-for e in emails:
+for e in owner_forms + emails:
     assert f'"{e}"' in out, f"{e} did not make it into the output"
+for e in emails:
+    assert e not in owner_forms, f"{e} is listed as both owner and team"
 
 (root / "firestore.rules.local").write_text(out)
 print("wrote firestore.rules.local")
@@ -67,5 +73,6 @@ for g in given:
     extra = [v for v in variants(g) if v != g]
     note = f"   (+ {', '.join(extra)})" if extra else ""
     print(f"  {role}: {g}{note}")
-print(f"  {len(emails)} spellings allowed in total")
+print(f"  {len(owner_forms) + len(emails)} spellings allowed in total "
+      f"({len(owner_forms)} owner, {len(emails)} team)")
 print("paste it into: Firestore Database -> Rules -> Publish")
