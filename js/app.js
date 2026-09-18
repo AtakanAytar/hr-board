@@ -65,9 +65,15 @@ let boardStarted = false;
 function startBoard() {
   if (boardStarted) return;
   boardStarted = true;
+  /* Before the board has loaded, an error means it cannot be shown at all.
+     Once it is on screen, a failed write must not look like a lockout —
+     the likeliest cause is rules lagging a deploy, and throwing the user
+     back to a sign-in screen over one rejected write is wrong. */
   store.onError(({ message }) => {
     $("#syncDot").classList.add("is-off");
-    showBlockingError(message);
+    if (!state.board) return showBlockingError(message);
+    toast(message.length > 90 ? message.slice(0, 88) + "…" : message);
+    console.error("[HR Board]", message);
   });
   store.onActivity(renderActivity);
   store.open((patch) => {
