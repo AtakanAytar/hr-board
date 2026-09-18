@@ -193,9 +193,14 @@ add fields when you actually miss them, not in advance.
 
 ### On a phone
 
-One column fills the screen and snaps as you swipe sideways; search moves to its
-own row; dialogs become full-screen sheets; inputs are 16px so iOS does not zoom
-when they are focused; tap targets are sized for thumbs.
+Columns stack full-width and the page scrolls down — no sideways swiping, and a
+column shows all its cards rather than scrolling inside itself. Search moves to
+its own row; dialogs become full-screen sheets; inputs are 16px so iOS does not
+zoom when they are focused; tap targets are sized for thumbs.
+
+Auto-scroll during a drag follows whichever axis the board can actually scroll,
+so dragging toward the bottom edge on a phone pulls the columns below into view,
+the same way dragging toward the right edge does on a desktop.
 
 **Dragging uses a short hold, not an immediate drag.** A finger that starts on a
 card is usually scrolling the column, so an immediate drag would make the board

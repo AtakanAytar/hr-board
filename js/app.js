@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609181011";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609181011";
+import { createStore, makeCard } from "./store.js?v=202609181035";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609181035";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609181011";
+} from "./util.js?v=202609181035";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -182,8 +182,16 @@ const bucketOf = (card) =>
    Render
    ============================================================ */
 let rerenderQueued = false;
+let dragInProgress = false;
+let renderPendingAfterDrag = false;
 function render() {
   const board = $("#board");
+
+  /*  Rebuilding the board mid-drag detaches the card being dragged and the
+      drop marker with it, so the drop lands nowhere and the card springs
+      back. A teammate's edit arriving at the wrong moment is enough to cause
+      it. Hold the render until the drag finishes. */
+  if (dragInProgress) { renderPendingAfterDrag = true; return; }
 
   /* A live update from a teammate must not wipe out a column name
      the local user is mid-way through typing. Defer instead. */
@@ -809,6 +817,16 @@ function exportJSON() {
 /* ============================================================
    Drag & drop — pointer based, so it works on touch too
    ============================================================ */
+/*  A drag that starts and ends inside the same card still produces a click,
+    which would open the editor on top of the move the user just made. */
+function swallowNextClick() {
+  const eat = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+  window.addEventListener("click", eat, { capture: true, once: true });
+  /* If no click follows — the pointer was released over a different element —
+     drop the listener rather than eating an unrelated click later. */
+  setTimeout(() => window.removeEventListener("click", eat, { capture: true }), 350);
+}
+
 function initDrag() {
   const boardEl = $("#board");
   const wrap = $("#boardWrap");
@@ -885,6 +903,9 @@ function initDrag() {
     stopScroll();
 
     if (!d.started) return;
+    dragInProgress = false;
+    swallowNextClick();          /* the drag must not also count as a tap */
+    if (renderPendingAfterDrag) { renderPendingAfterDrag = false; render(); }
 
     /* Read the marker's position BEFORE detaching it from the DOM —
        once removed it has no parent and the drop slot is lost. */
@@ -905,6 +926,8 @@ function initDrag() {
       drag.layer?.remove(); drag.line?.remove();
       drag.el.classList.remove("is-ghost");
       drag = null;
+      dragInProgress = false;
+      renderPendingAfterDrag = false;
       document.body.classList.remove("is-dragging");
       stopScroll();
       render();
@@ -914,6 +937,7 @@ function initDrag() {
   function startVisualDrag() {
     const rect = drag.el.getBoundingClientRect();
     drag.started = true;
+    dragInProgress = true;
     drag.grabX = drag.sx - rect.left;
     drag.grabY = drag.sy - rect.top;
 
@@ -954,32 +978,48 @@ function initDrag() {
     return null;
   }
 
-  /* edge auto-scroll */
+  /*  Edge auto-scroll. Which axis matters depends on the layout: columns sit
+      side by side on a wide screen and stacked on a phone, so scroll whatever
+      the board can actually scroll rather than assuming horizontal. Inside a
+      column, scroll its own list only when that list is the scrolling box —
+      stacked columns grow to fit and the page scrolls instead. */
   let scrollVec = { x: 0, y: 0, el: null };
+  const EDGE = 72;
+
   function autoScroll(x, y) {
     const r = wrap.getBoundingClientRect();
-    const EDGE = 70;
-    scrollVec.x = x < r.left + EDGE ? -14 : x > r.right - EDGE ? 14 : 0;
+    const canX = wrap.scrollWidth > wrap.clientWidth + 1;
+    const canY = wrap.scrollHeight > wrap.clientHeight + 1;
+
+    scrollVec.x = !canX ? 0 : x < r.left + EDGE ? -14 : x > r.right - EDGE ? 14 : 0;
+    scrollVec.y = !canY ? 0 : y < r.top + EDGE ? -14 : y > r.bottom - EDGE ? 14 : 0;
 
     const zone = zoneAt(x, y);
-    let vy = 0;
-    if (zone) {
+    scrollVec.el = null;
+    if (zone && zone.scrollHeight > zone.clientHeight + 1) {
       const zr = zone.getBoundingClientRect();
-      vy = y < zr.top + 40 ? -10 : y > zr.bottom - 40 ? 10 : 0;
+      const inner = y < zr.top + 40 ? -10 : y > zr.bottom - 40 ? 10 : 0;
+      if (inner) {
+        scrollVec.el = zone;
+        scrollVec.y = inner;        /* the inner list wins over the page */
+      }
     }
-    scrollVec.y = vy;
-    scrollVec.el = zone;
 
     if (!raf && (scrollVec.x || scrollVec.y)) tick();
   }
+
   function tick() {
     raf = requestAnimationFrame(() => {
       raf = 0;
       if (scrollVec.x) wrap.scrollLeft += scrollVec.x;
-      if (scrollVec.y && scrollVec.el) scrollVec.el.scrollTop += scrollVec.y;
+      if (scrollVec.y) {
+        if (scrollVec.el) scrollVec.el.scrollTop += scrollVec.y;
+        else wrap.scrollTop += scrollVec.y;
+      }
       if (scrollVec.x || scrollVec.y) tick();
     });
   }
+
   function stopScroll() {
     scrollVec = { x: 0, y: 0, el: null };
     $$(".column").forEach((c) => c.classList.remove("is-dropzone"));

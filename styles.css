@@ -353,16 +353,21 @@ body.is-dragging *{cursor:grabbing !important}
   .popover{right:8px; left:8px; width:auto; top:auto}
   .pop-item{padding:12px}
 
-  /* one column per screen, snapped, swipe sideways between them */
-  .board-wrap{padding:10px; scroll-snap-type:x mandatory; scroll-padding:10px}
-  .board{gap:10px}
-  .column{width:86vw; max-width:360px; scroll-snap-align:center}
+  /* columns stack and the page scrolls down — no sideways swiping */
+  .board-wrap{padding:10px; overflow-x:hidden}
+  .board{
+    flex-direction:column; align-items:stretch;
+    width:100%; min-width:0; gap:12px;
+  }
+  .column{width:100%; max-width:none; max-height:none}
+  /* the page scrolls, not each column, so a column shows all its cards */
+  .col-cards{overflow:visible; max-height:none}
   .col-head{padding:12px 12px 8px}
   .col-head .icon-btn{opacity:1}              /* no hover on touch — always show */
   .card{padding:12px 12px}
   .card-title{font-size:14.5px}
   .add-card{padding:12px}
-  .add-column{width:78vw}
+  .add-column{width:100%}
 
   /* dialogs become full-screen sheets */
   .dialog{
@@ -390,7 +395,6 @@ body.is-dragging *{cursor:grabbing !important}
 @media (max-width:400px){
   .board-title{max-width:34vw; font-size:15px}
   .seg-btn{padding:7px 9px; font-size:12.5px}
-  .column{width:90vw}
 }
 
 @media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important}}
