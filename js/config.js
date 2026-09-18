@@ -12,12 +12,12 @@
    listed on the board read or write it.
 ------------------------------------------------------------------- */
 export const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID",
+  apiKey: "AIzaSyCHxw22f0iWcdmS7lIm3wD49Cb-IM7kwis",
+  authDomain: "hr-board-89600.firebaseapp.com",
+  projectId: "hr-board-89600",
+  storageBucket: "hr-board-89600.firebasestorage.app",
+  messagingSenderId: "1014599332452",
+  appId: "1:1014599332452:web:a132e5a1cee0ba446ee571",
 };
 
 /* One shared board for the team. Change only if you want a second,

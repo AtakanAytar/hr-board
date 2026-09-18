@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609180305";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180305";
+import { createStore, makeCard } from "./store.js?v=202609180310";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180310";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609180305";
+} from "./util.js?v=202609180310";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
