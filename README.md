@@ -77,7 +77,12 @@ function isFounder() {
 }
 ```
 
-Put the intended owner's Google address there, lower case. Only that account
+Put the intended owner's address there, lower case — that account is the only
+one that can bring the board into existence.
+
+Keep the real address out of this repo if it is public. `./owner-rules.sh
+someone@example.com` writes `firestore.rules.local`, which is gitignored, with
+the address filled in and ready to paste into the console. Only that account
 can bring the board into existence. Without the pin, "signed in" means any
 Google account in the world and the first arrival at an unclaimed board becomes
 its permanent owner — recoverable only by deleting the document by hand. Left

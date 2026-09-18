@@ -43,14 +43,12 @@ service cloud.firestore {
 
     /*  WHO MAY CREATE THE BOARD IN THE FIRST PLACE.
         --------------------------------------------
-        Put the intended owner's Google address here, in lower case.
+        Exactly one address, lower case. Change it only before the board
+        exists; afterwards ownership lives in the document itself.
 
         Without this pin, "signed in" means any Google account in the world,
         and whoever reaches an unclaimed board first becomes its permanent
-        owner. Recovering from that means deleting the document by hand.
-
-        Left as the placeholder, nobody can create the board — which is the
-        safe way to be wrong.                                              */
+        owner — recoverable only by deleting the document by hand.         */
     function isFounder() {
       return signedIn() && myEmail() == "PUT_THE_OWNER_EMAIL_HERE";
     }
