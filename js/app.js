@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609180913";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180913";
+import { createStore, makeCard } from "./store.js?v=202609180935";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180935";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609180913";
+} from "./util.js?v=202609180935";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -205,6 +205,8 @@ function columnHTML(col, cards) {
             data-col-name="${esc(col.key)}">${esc(col.title)}</span>
       <span class="col-count">${cards.length}</span>
       <span class="spacer"></span>
+      ${cards.length ? `<button class="icon-btn" data-act="archive-column" data-col="${esc(col.key)}" title="Bu sütundakileri arşivle" aria-label="Bu sütundakileri arşivle">
+        <svg viewBox="0 0 24 24"><path d="M3 7h18v4H3zM5 11v9h14v-9M10 15h4"/></svg></button>` : ""}
       ${editable ? `<button class="icon-btn" data-act="del-column" data-col="${esc(col.key)}" title="Sütunu sil" aria-label="Sütunu sil">
         <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>` : ""}
     </header>
@@ -331,6 +333,7 @@ function wireChrome() {
     $("#accountMenu").hidden = true;
     if (act === "signout") store.signOut();
     if (act === "members") openMembers();
+    if (act === "archive") openArchive();
     if (act === "activity") $("#activityDialog").showModal();
     if (act === "export-csv") exportCSV();
     if (act === "export-json") exportJSON();
@@ -361,6 +364,7 @@ function wireChrome() {
   initDrag();
   wireCardDialog();
   wireMembersDialog();
+  wireArchiveDialog();
 
   $$("[data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
 }
@@ -401,6 +405,7 @@ function onBoardClick(e) {
     return;
   }
   if (act === "add-column") return addColumn();
+  if (act === "archive-column") return archiveColumn(e.target.closest("[data-act]").dataset.col);
   if (act === "del-column") return deleteColumn(e.target.closest("[data-act]").dataset.col);
 
   const card = e.target.closest(".card");
@@ -409,6 +414,17 @@ function onBoardClick(e) {
 
 const activeStatusColumns = () =>
   state.board?.columns?.length ? state.board.columns : DEFAULT_COLUMNS;
+
+/** Bulk archive: the usual way a finished column gets cleared. */
+async function archiveColumn(colKey) {
+  const cards = visibleCards().filter((c) => bucketOf(c) === colKey);
+  if (!cards.length) return;
+  const label = activeColumns().find((c) => c.key === colKey)?.title || colKey;
+  if (!confirm(`“${label}” içindeki ${cards.length} görev arşivlensin mi? Panodan kalkar, arşivde durur.`)) return;
+  for (const c of cards) await store.archiveCard(c);
+  store.logActivity(`“${label}” içindeki ${cards.length} görevi arşivledi`);
+  toast(`${cards.length} görev arşivlendi`);
+}
 
 async function addColumn() {
   const cols = [...activeStatusColumns()];
@@ -463,6 +479,7 @@ function openCard(id, seed = {}) {
   $("#f_notes").value = d.notes || "";
 
   $("#deleteCardBtn").hidden = !card;
+  $("#archiveCardBtn").hidden = !card;
   $("#cardMeta").textContent = card
     ? `Son güncelleme ${fmtWhen(card.updatedAt)}${card.updatedBy ? ` · ${card.updatedBy}` : ""}`
     : "";
@@ -491,6 +508,15 @@ function wireCardDialog() {
     store.logActivity(existing ? `“${card.title}” görevini güncelledi` : `“${card.title}” görevini ekledi`);
     $("#cardDialog").close();
     toast(existing ? "Kaydedildi" : "Görev eklendi");
+  });
+
+  $("#archiveCardBtn").addEventListener("click", async () => {
+    const card = state.cards.find((c) => c.id === state.editingId);
+    if (!card) return;
+    await store.archiveCard(card);
+    store.logActivity(`“${card.title}” görevini arşivledi`);
+    $("#cardDialog").close();
+    toast("Arşivlendi");
   });
 
   $("#deleteCardBtn").addEventListener("click", async () => {
@@ -605,6 +631,90 @@ function wireMembersDialog() {
     await store.saveBoard({ members, allowedEmails: members.map((m) => m.email) });
     store.logActivity(`${email} adresini çıkardı`);
     renderMembers();
+  });
+}
+
+/* ============================================================
+   Archive — loaded on demand and paged, never by the live board
+   ============================================================ */
+const archive = { items: [], cursor: null, done: false, loading: false, q: "" };
+
+async function openArchive() {
+  archive.items = [];
+  archive.cursor = null;
+  archive.done = false;
+  archive.q = "";
+  $("#archiveSearch").value = "";
+  $("#archiveList").innerHTML = `<li class="muted small">Yükleniyor…</li>`;
+  $("#archiveDialog").showModal();
+  await loadMoreArchive();
+}
+
+async function loadMoreArchive() {
+  if (archive.loading || archive.done) return;
+  archive.loading = true;
+  const page = await store.loadArchive({ cursor: archive.cursor });
+  archive.items.push(...page.items);
+  archive.cursor = page.cursor;
+  archive.done = page.done;
+  archive.loading = false;
+  renderArchive();
+}
+
+function renderArchive() {
+  const q = archive.q.trim().toLowerCase();
+  const shown = q
+    ? archive.items.filter((c) =>
+        [c.title, c.owner, (c.tags || []).join(" ")].join(" ").toLowerCase().includes(q))
+    : archive.items;
+
+  setHTML("#archiveList", shown.length
+    ? shown.map((c) => `<li>
+        <span class="pip" style="background:${esc(colorFor(c.owner))}">${esc(initials(c.owner) || "?")}</span>
+        <span class="arch-main">
+          <b>${esc(c.title || "Başlıksız görev")}</b>
+          <span class="muted small">${esc(c.owner || "Atanmamış")} · ${esc(fmtWhen(c.archivedAt))} arşivlendi</span>
+        </span>
+        <button class="btn btn-ghost btn-sm" data-restore="${esc(c.id)}">Geri al</button>
+        <button class="icon-btn" data-purge="${esc(c.id)}" title="Kalıcı olarak sil" aria-label="Kalıcı olarak sil">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+      </li>`).join("")
+    : `<li class="muted small">${archive.items.length ? "Aramanıza uyan kayıt yok." : "Arşiv boş."}</li>`);
+
+  $("#archiveMore").hidden = archive.done || !!q;
+  $("#archiveCount").textContent = archive.items.length
+    ? `${shown.length} / ${archive.items.length} kayıt yüklendi${archive.done ? "" : " (devamı var)"}`
+    : "";
+}
+
+function wireArchiveDialog() {
+  $("#archiveMore").addEventListener("click", loadMoreArchive);
+  $("#archiveSearch").addEventListener("input", debounce((e) => {
+    archive.q = e.target.value;
+    renderArchive();
+  }, 150));
+
+  $("#archiveList").addEventListener("click", async (e) => {
+    const restoreId = e.target.closest("[data-restore]")?.dataset.restore;
+    const purgeId = e.target.closest("[data-purge]")?.dataset.purge;
+    const card = archive.items.find((c) => c.id === (restoreId || purgeId));
+    if (!card) return;
+
+    if (restoreId) {
+      /* Put it back at the top of a column that still exists. */
+      const cols = activeStatusColumns();
+      const columnId = cols.some((c) => c.id === card.columnId) ? card.columnId : cols[0].id;
+      await store.unarchiveCard({ ...card, columnId, order: nextOrder(columnId) });
+      store.logActivity(`“${card.title}” görevini arşivden çıkardı`);
+      toast("Panoya geri alındı");
+    } else {
+      if (!confirm(`“${card.title}” kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`)) return;
+      await store.deleteArchived(card.id);
+      store.logActivity(`“${card.title}” görevini arşivden kalıcı olarak sildi`);
+      toast("Kalıcı olarak silindi");
+    }
+    archive.items = archive.items.filter((c) => c.id !== card.id);
+    renderArchive();
   });
 }
 

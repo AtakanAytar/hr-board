@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
-<link rel="stylesheet" href="styles.css?v=202609180913">
+<link rel="stylesheet" href="styles.css?v=202609180935">
 </head>
 <body>
 
@@ -100,6 +100,7 @@
       <span id="popEmail" class="muted"></span>
     </div>
     <button class="pop-item" data-act="members"><span>👥</span> Kişiler</button>
+    <button class="pop-item" data-act="archive"><span>📦</span> Arşiv</button>
     <button class="pop-item" data-act="activity"><span>🕒</span> İşlem geçmişi</button>
     <button class="pop-item" data-act="export-csv"><span>⬇️</span> CSV olarak indir</button>
     <button class="pop-item" data-act="export-json"><span>🧾</span> JSON yedeği indir</button>
@@ -169,6 +170,7 @@
 
     <footer class="dlg-foot">
       <button type="button" id="deleteCardBtn" class="btn btn-danger-ghost btn-sm" hidden>Sil</button>
+      <button type="button" id="archiveCardBtn" class="btn btn-ghost btn-sm" hidden>📦 Arşivle</button>
       <div class="spacer"></div>
       <button type="button" class="btn btn-ghost" data-close>Vazgeç</button>
       <button type="submit" class="btn btn-primary">Kaydet</button>
@@ -212,6 +214,23 @@
   </div>
 </dialog>
 
+<!-- ───────────────── Arşiv ───────────────── -->
+<dialog id="archiveDialog" class="dialog">
+  <header class="dlg-head"><h2>Arşiv</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Kapat"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </header>
+  <div class="dlg-body">
+    <p class="muted small">Tamamlanan görevler panodan kalkar ama silinmez. Arşiv yalnızca
+      bu pencere açıldığında yüklenir, o yüzden pano ne kadar eskirse eskisin açılış hızı değişmez.</p>
+    <input id="archiveSearch" type="search" class="arch-search" placeholder="Yüklenenler içinde ara…" autocomplete="off">
+    <ul id="archiveList" class="archive-list"></ul>
+    <div class="arch-foot">
+      <button id="archiveMore" class="btn btn-ghost btn-sm" hidden>Daha fazla yükle</button>
+      <span id="archiveCount" class="muted small"></span>
+    </div>
+  </div>
+</dialog>
+
 <!-- ───────────────── İşlem geçmişi ───────────────── -->
 <dialog id="activityDialog" class="dialog">
   <header class="dlg-head"><h2>İşlem geçmişi</h2>
@@ -222,6 +241,6 @@
 
 <div id="toast" class="toast" hidden></div>
 
-<script type="module" src="js/app.js?v=202609180913"></script>
+<script type="module" src="js/app.js?v=202609180935"></script>
 </body>
 </html>

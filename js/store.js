@@ -19,8 +19,8 @@
      store.logActivity(text)
      store.onActivity(cb)
 ------------------------------------------------------------------- */
-import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180913";
-import { uid, todayISO } from "./util.js?v=202609180913";
+import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180935";
+import { uid, todayISO } from "./util.js?v=202609180935";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
 
@@ -68,7 +68,11 @@ function demoStore() {
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        parsed.archive = parsed.archive || {};   // boards saved before archiving existed
+        return parsed;
+      }
     } catch { /* corrupt or blocked storage — fall through to seed */ }
     return seed();
   }
@@ -117,6 +121,7 @@ function demoStore() {
     return {
       board: b,
       cards,
+      archive: {},
       activity: [{ id: uid("a"), text: "Demo pano oluşturuldu", who: "Sistem", ts: Date.now() }],
     };
   }
@@ -136,6 +141,28 @@ function demoStore() {
       persist();
     },
     async deleteCard(id) { delete state.cards[id]; persist(); },
+
+    async archiveCard(card) {
+      state.archive[card.id] = { ...state.cards[card.id], ...card, archivedAt: Date.now(), archivedBy: "Sen" };
+      delete state.cards[card.id];
+      persist();
+    },
+    async unarchiveCard(card) {
+      const { archivedAt, archivedBy, ...rest } = state.archive[card.id] || card;
+      state.cards[card.id] = { ...rest, updatedAt: Date.now() };
+      delete state.archive[card.id];
+      persist();
+      void archivedAt; void archivedBy;
+    },
+    async deleteArchived(id) { delete state.archive[id]; persist(); },
+
+    async loadArchive({ cursor = 0, pageSize = 25 } = {}) {
+      const all = Object.values(state.archive)
+        .sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0));
+      const items = all.slice(cursor, cursor + pageSize);
+      const next = cursor + items.length;
+      return { items, cursor: next, done: next >= all.length };
+    },
     async logActivity(text) {
       state.activity.unshift({ id: uid("a"), text, who: "Sen", ts: Date.now() });
       state.activity = state.activity.slice(0, 200);
@@ -162,7 +189,7 @@ async function cloudStore() {
   const {
     initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager,
     doc, collection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
-    addDoc, query, orderBy, limit,
+    addDoc, getDocs, query, orderBy, limit, startAfter, writeBatch,
   } = fsMod;
 
   const app = initializeApp(firebaseConfig);
@@ -181,6 +208,7 @@ async function cloudStore() {
   const boardRef = doc(db, "boards", BOARD_ID);
   const cardsRef = collection(db, "boards", BOARD_ID, "cards");
   const actRef = collection(db, "boards", BOARD_ID, "activity");
+  const archRef = collection(db, "boards", BOARD_ID, "archive");
 
   const api = {
     mode: "cloud",
@@ -266,6 +294,51 @@ async function cloudStore() {
     },
 
     async deleteCard(id) { await deleteDoc(doc(cardsRef, id)).catch((e) => api._err(translate(e))); },
+
+    /* Archiving moves the document out of the live collection rather than
+       flagging it, so the board's read cost stays flat as the years pass.
+       Batched, so a card can never exist in both places or neither. */
+    async archiveCard(card) {
+      const { id, ...rest } = card;
+      const batch = writeBatch(db);
+      batch.set(doc(archRef, id), {
+        ...rest,
+        archivedAt: Date.now(),
+        archivedBy: api.user?.name || "",
+      });
+      batch.delete(doc(cardsRef, id));
+      await batch.commit().catch((e) => api._err(translate(e)));
+    },
+
+    async unarchiveCard(card) {
+      const { id, archivedAt, archivedBy, ...rest } = card;
+      const batch = writeBatch(db);
+      batch.set(doc(cardsRef, id), { ...rest, updatedAt: Date.now() });
+      batch.delete(doc(archRef, id));
+      await batch.commit().catch((e) => api._err(translate(e)));
+      void archivedAt; void archivedBy;
+    },
+
+    async deleteArchived(id) { await deleteDoc(doc(archRef, id)).catch((e) => api._err(translate(e))); },
+
+    /* Paged, and only ever read when someone opens the archive. */
+    async loadArchive({ cursor = null, pageSize = 25 } = {}) {
+      const base = [orderBy("archivedAt", "desc"), limit(pageSize)];
+      const q = cursor
+        ? query(archRef, orderBy("archivedAt", "desc"), startAfter(cursor), limit(pageSize))
+        : query(archRef, ...base);
+      try {
+        const snap = await getDocs(q);
+        return {
+          items: snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+          cursor: snap.docs[snap.docs.length - 1] || null,
+          done: snap.size < pageSize,
+        };
+      } catch (e) {
+        api._err(translate(e));
+        return { items: [], cursor: null, done: true };
+      }
+    },
 
     async logActivity(text) {
       await addDoc(actRef, { text, who: api.user?.name || "biri", ts: Date.now() }).catch(() => {});

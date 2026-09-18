@@ -83,6 +83,12 @@ service cloud.firestore {
         allow read, create, update, delete: if isMember(boardId);
       }
 
+      /*  Finished tasks live here instead of in /cards, so the board's live
+          listener never pays to download years of history.                */
+      match /archive/{cardId} {
+        allow read, create, update, delete: if isMember(boardId);
+      }
+
       // Append-only history: members add entries, nobody rewrites them.
       match /activity/{entryId} {
         allow read, create: if isMember(boardId);

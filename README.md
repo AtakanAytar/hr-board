@@ -135,6 +135,29 @@ firestore.rules database-enforced access control
 No build step, no dependencies, no framework — plain ES modules the browser
 runs directly. Nothing to reinstall or re-deploy when tooling moves on.
 
+### Archiving, and why it is a subcollection
+
+The live board subscribes to the whole `cards` collection, so **every cold load
+reads every card**. Storage is not the constraint — 1 GiB is roughly two million
+cards — reads are. On a board that never ends, hiding finished work behind a UI
+filter would still download years of it on every load.
+
+So archiving physically moves the document from `cards` to an `archive`
+subcollection, in one atomic batch. Consequences worth knowing:
+
+- The live listener needs no filter, so the board's read cost tracks *open* work,
+  not total history. Verified: 61 archived tasks, 5 cards rendered, 5 read.
+- The archive is fetched only when its window opens, 25 rows at a time.
+- No migration. A flag plus `where("archived","==",false)` would have skipped
+  every existing card, since that clause does not match documents where the
+  field is absent.
+- No composite index to create in the console — one collection ordered by one
+  field.
+
+Search inside the archive filters what has been loaded so far, not the whole
+history; Firestore has no substring search, and scanning everything server-side
+is exactly the cost this design avoids. Load more pages to widen the search.
+
 ### What a card holds
 
 Title, owner, status, priority, due date, tags, notes. Deliberately little —
