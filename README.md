@@ -91,6 +91,13 @@ That writes `firestore.rules.local` — gitignored — with the first address as
 owner and every listed address on the standing team allow list. Paste it into
 the console.
 
+Gmail ignores dots and `+tags`, so `a.b@gmail.com`, `ab@gmail.com` and
+`a.b+work@gmail.com` are one mailbox — but Firebase reports whichever spelling
+the account was registered with, and the rules compare exact strings. The
+generator expands every Gmail address into all the forms it can arrive as, so a
+teammate is not locked out by a dot. Non-Gmail domains are left alone, because
+there dots are significant.
+
 There are two independent ways someone gets access:
 
 | | Changed by | Needs a console visit |

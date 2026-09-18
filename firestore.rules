@@ -34,6 +34,10 @@ service cloud.firestore {
         These addresses can open and edit the board by signing in, without
         the owner adding them through the People dialog first.
 
+        Gmail ignores dots and +tags, so one mailbox has several spellings
+        and Firebase reports whichever the account was registered with. The
+        generator expands each address into every form it can arrive as.
+
         Real addresses are never committed — this repository is public.
         Generate the file to publish with:
             ./owner-rules.sh owner@example.com member@example.com ...
@@ -66,14 +70,19 @@ service cloud.firestore {
 
     /*  WHO MAY CREATE THE BOARD IN THE FIRST PLACE.
         --------------------------------------------
-        Exactly one address, lower case. Change it only before the board
-        exists; afterwards ownership lives in the document itself.
+        The owner, lower case, plus any equivalent spellings of the same
+        mailbox. Change it only before the board exists; afterwards ownership
+        lives in the document itself.
 
         Without this pin, "signed in" means any Google account in the world,
         and whoever reaches an unclaimed board first becomes its permanent
         owner — recoverable only by deleting the document by hand.         */
+    function ownerEmails() {
+      return ["PUT_THE_OWNER_EMAIL_HERE"];
+    }
+
     function isFounder() {
-      return signedIn() && myEmail() == "PUT_THE_OWNER_EMAIL_HERE";
+      return signedIn() && myEmail() in ownerEmails();
     }
 
     match /boards/{boardId} {
