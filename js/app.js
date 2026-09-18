@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609180935";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180935";
+import { createStore, makeCard } from "./store.js?v=202609180941";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609180941";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609180935";
+} from "./util.js?v=202609180941";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -112,7 +112,11 @@ function paintUser(user) {
 function syncBoardChrome() {
   const t = $("#boardTitle");
   if (document.activeElement !== t) t.textContent = state.board.name || "HR Board";
+  /* Renaming the board is a member-level change; columns are not. */
   t.contentEditable = "true";
+  setHTML("#popRole", amOwner()
+    ? `<span class="role-pill is-owner">Pano sahibi</span>`
+    : `<span class="role-pill">Üye</span> <span class="muted small">— sütunları sahibi yönetir</span>`);
   renderOwnerFilterChips();
   refreshDatalists();
 }
@@ -120,6 +124,14 @@ function syncBoardChrome() {
 /* ============================================================
    Derived data
    ============================================================ */
+/** Is the signed-in user the board owner? Mirrors firestore.rules exactly —
+    if these two ever disagree, the UI offers buttons the database refuses. */
+function amOwner() {
+  const me = store?.user?.email?.toLowerCase();
+  const owner = state.board?.ownerEmail?.toLowerCase();
+  return !!me && !!owner && me === owner;
+}
+
 /** Everyone work can sit on: the roster, plus any name already on a card.
     Deliberately unrelated to who has a login — see the People dialog. */
 function allOwners() {
@@ -191,7 +203,7 @@ function render() {
 
   board.innerHTML =
     cols.map((col) => columnHTML(col, cards.filter((c) => bucketOf(c) === col.key))).join("") +
-    (state.view === "status"
+    (state.view === "status" && amOwner()
       ? `<button class="add-column" data-act="add-column">+ Sütun ekle</button>`
       : "");
 
@@ -202,7 +214,8 @@ function render() {
 }
 
 function columnHTML(col, cards) {
-  const editable = col.kind === "status";
+  /* Column structure is owner-only in the rules, so renaming is too. */
+  const editable = col.kind === "status" && amOwner();
   return `
   <section class="column" data-col="${esc(col.key)}" data-kind="${col.kind}">
     <header class="col-head">
@@ -211,7 +224,7 @@ function columnHTML(col, cards) {
             data-col-name="${esc(col.key)}">${esc(col.title)}</span>
       <span class="col-count">${cards.length}</span>
       <span class="spacer"></span>
-      ${cards.length ? `<button class="icon-btn" data-act="archive-column" data-col="${esc(col.key)}" title="Bu sütundakileri arşivle" aria-label="Bu sütundakileri arşivle">
+      ${cards.length && amOwner() ? `<button class="icon-btn" data-act="archive-column" data-col="${esc(col.key)}" title="Bu sütundakileri arşivle" aria-label="Bu sütundakileri arşivle">
         <svg viewBox="0 0 24 24"><path d="M3 7h18v4H3zM5 11v9h14v-9M10 15h4"/></svg></button>` : ""}
       ${editable ? `<button class="icon-btn" data-act="del-column" data-col="${esc(col.key)}" title="Sütunu sil" aria-label="Sütunu sil">
         <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>` : ""}
@@ -423,6 +436,7 @@ const activeStatusColumns = () =>
 
 /** Bulk archive: the usual way a finished column gets cleared. */
 async function archiveColumn(colKey) {
+  if (!amOwner()) return toast("Toplu arşivleme yalnızca pano sahibine açık.");
   const cards = visibleCards().filter((c) => bucketOf(c) === colKey);
   if (!cards.length) return;
   const label = activeColumns().find((c) => c.key === colKey)?.title || colKey;
@@ -433,6 +447,7 @@ async function archiveColumn(colKey) {
 }
 
 async function addColumn() {
+  if (!amOwner()) return toast("Sütunları yalnızca pano sahibi değiştirebilir.");
   const cols = [...activeStatusColumns()];
   cols.push({ id: uid("col"), title: "Yeni sütun", color: "#94a3b8" });
   await store.saveBoard({ columns: cols });
@@ -440,6 +455,7 @@ async function addColumn() {
 }
 
 async function renameColumn(id, text) {
+  if (!amOwner()) return render();
   const cols = activeStatusColumns().map((c) => ({ ...c }));
   const col = cols.find((c) => c.id === id);
   const title = String(text).trim().slice(0, 40);
@@ -451,6 +467,7 @@ async function renameColumn(id, text) {
 }
 
 async function deleteColumn(id) {
+  if (!amOwner()) return toast("Sütunları yalnızca pano sahibi silebilir.");
   const cols = activeStatusColumns();
   if (cols.length <= 1) return toast("Panoda en az bir sütun olmalı.");
   const inCol = state.cards.filter((c) => c.columnId === id);

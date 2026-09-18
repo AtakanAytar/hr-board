@@ -163,6 +163,31 @@ is exactly the cost this design avoids. Load more pages to widen the search.
 Title, owner, status, priority, due date, tags, notes. Deliberately little —
 add fields when you actually miss them, not in advance.
 
+### Roles
+
+Two roles, no configuration. The owner is whoever created the board; everyone
+else on the access list is a member.
+
+| Action | Owner | Member |
+|---|:--:|:--:|
+| Add, edit, move, archive, delete tasks | ✅ | ✅ |
+| Restore or purge from the archive | ✅ | ✅ |
+| Rename the board, manage assignees | ✅ | ✅ |
+| Add, rename or delete a **column** | ✅ | ❌ |
+| Bulk-archive a whole column | ✅ | ⚠️ UI only |
+| Add or remove **board access** | ✅ | ❌ |
+
+The ❌ rows are enforced in `firestore.rules`, so they hold whatever the client
+does. Columns are compared whole rather than checking "was anything removed",
+because rules cannot pull ids out of a list of maps and a delete-plus-add in one
+write would slip past a length check. The cost is that members cannot rename
+columns either — an acceptable trade for a guarantee that actually holds.
+
+The ⚠️ row is a guardrail, not a boundary: bulk archive is twelve ordinary card
+writes, and a member may archive cards one at a time, so hiding the button
+prevents accidents rather than intent. Restricting archiving outright would mean
+taking it away from members entirely; say so if that is what you want.
+
 ### Who can get in
 
 | Situation | What happens |

@@ -19,8 +19,8 @@
      store.logActivity(text)
      store.onActivity(cb)
 ------------------------------------------------------------------- */
-import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180935";
-import { uid, todayISO } from "./util.js?v=202609180935";
+import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609180941";
+import { uid, todayISO } from "./util.js?v=202609180941";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
 

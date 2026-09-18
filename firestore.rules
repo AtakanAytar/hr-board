@@ -69,12 +69,20 @@ service cloud.firestore {
                     && request.resource.data.ownerEmail == myEmail()
                     && myEmail() in request.resource.data.allowedEmails;
 
-      /*  Members may rename the board and edit columns. Only the owner may
-          change who has access, and the board can never be handed to
-          someone else.                                                    */
+      /*  Members may rename the board and manage the assignee list.
+          Reserved to the owner: who has access, and the column structure.
+          The board can never be handed to someone else.
+
+          Columns are compared whole rather than checking "did anything get
+          removed", because rules cannot pull the ids out of a list of maps,
+          so a delete-plus-add in one write would slip past a length check.
+          Owner-only for every column change is the guarantee that actually
+          holds — at the cost of members not renaming columns either.      */
       allow update: if isMember(boardId)
                     && request.resource.data.ownerEmail == resource.data.ownerEmail
                     && (request.resource.data.allowedEmails == resource.data.allowedEmails
+                        || isOwner(boardId))
+                    && (request.resource.data.columns == resource.data.columns
                         || isOwner(boardId));
 
       allow delete: if isOwner(boardId);
