@@ -272,6 +272,22 @@ itself in ten minutes and is miserable to debug. The rendering code is also
 written to skip a missing element rather than throw, so a mismatch costs you
 one widget instead of the whole board.
 
+### Click versus drag
+
+A pointer press on a card can turn out to be either, and the distinction is
+made at release, not at press: if the card lands back between the same two
+neighbours in the same column, the gesture was a click, so the editor opens and
+no write is sent. Only a drop that actually relocates the card suppresses the
+click that follows it.
+
+Deciding on "did a drag start?" instead is what broke editing on the desktop
+once: an ordinary mouse click drifts a few pixels, which crossed the drag
+threshold, and the click was then swallowed as if the user had dragged.
+
+For the same reason a no-op drop does not redraw the board. Redrawing replaces
+the card element before the browser delivers the click that follows pointerup,
+so the click would land on a detached node and nothing would open.
+
 ### Card ordering
 
 Each card holds a numeric `order`. Dropping a card between two others sets its

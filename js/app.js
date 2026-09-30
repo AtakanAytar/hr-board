@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609181035";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609181035";
+import { createStore, makeCard } from "./store.js?v=202609300811";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609300811";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609181035";
+} from "./util.js?v=202609300811";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -839,6 +839,10 @@ function initDrag() {
       immediate small-movement threshold.                                    */
   const HOLD_MS = 280;
   const MOVE_SLOP = 10;
+  /* Generous enough that the drift in an ordinary mouse click does not read
+     as a drag. The no-op check below is what actually protects the click,
+     but there is no reason to flash a drag layer during one either. */
+  const MOUSE_DRAG_START = 9;
 
   boardEl.addEventListener("pointerdown", (e) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
@@ -881,7 +885,7 @@ function initDrag() {
     }
 
     if (!drag.started) {
-      if (moved < 6) return;
+      if (moved < MOUSE_DRAG_START) return;
       startVisualDrag();
     }
 
@@ -904,18 +908,40 @@ function initDrag() {
 
     if (!d.started) return;
     dragInProgress = false;
-    swallowNextClick();          /* the drag must not also count as a tap */
-    if (renderPendingAfterDrag) { renderPendingAfterDrag = false; render(); }
 
     /* Read the marker's position BEFORE detaching it from the DOM —
        once removed it has no parent and the drop slot is lost. */
     const slot = d.target ? readSlot(d.line, d.id) : null;
 
+    /*  Landing back between the same two neighbours in the same column is
+        not a move. It is what an ordinary click looks like once the pointer
+        has drifted a few pixels, so let the click through to open the
+        editor, and do not spend a write saying nothing changed. */
+    const unmoved = !d.target
+      || (d.target === d.fromZone
+          && slot?.beforeId === d.fromPrev
+          && slot?.afterId === d.fromNext);
+
     d.layer?.remove();
     d.line?.remove();
     d.el.classList.remove("is-ghost");
 
-    if (!d.target) { render(); return; }
+    if (unmoved) {
+      /*  Nothing changed, so there is nothing to redraw — and redrawing here
+          would be actively harmful: it replaces the card element before the
+          browser delivers the click that follows this pointerup, so the click
+          lands on a detached node and the editor never opens. That is exactly
+          how a click with a few pixels of drift stopped working.
+          Any render held back during the drag is deferred past the click. */
+      if (renderPendingAfterDrag) {
+        renderPendingAfterDrag = false;
+        setTimeout(render, 0);
+      }
+      return;
+    }
+
+    swallowNextClick();
+    renderPendingAfterDrag = false;   /* the write below redraws anyway */
     await commitMove(d.id, d.target, slot);
   };
   boardEl.addEventListener("pointerup", finish);
@@ -938,6 +964,14 @@ function initDrag() {
     const rect = drag.el.getBoundingClientRect();
     drag.started = true;
     dragInProgress = true;
+
+    /* Where it began, so a drag that ends where it started is recognised
+       as the click it really was. */
+    const sibs = [...drag.el.parentElement.children].filter((n) => n.classList.contains("card"));
+    const at = sibs.indexOf(drag.el);
+    drag.fromZone = drag.el.parentElement.dataset.drop;
+    drag.fromPrev = sibs[at - 1]?.dataset.id || null;
+    drag.fromNext = sibs[at + 1]?.dataset.id || null;
     drag.grabX = drag.sx - rect.left;
     drag.grabY = drag.sy - rect.top;
 
@@ -1037,9 +1071,13 @@ function readSlot(lineEl, dragId) {
     const c = state.cards.find((x) => x.id === el?.dataset?.id);
     return c ? c.order ?? 0 : null;
   };
+  const beforeEl = kids.slice(0, idx).reverse().find(isOther);
+  const afterEl = kids.slice(idx + 1).find(isOther);
   return {
-    before: orderOf(kids.slice(0, idx).reverse().find(isOther)),
-    after: orderOf(kids.slice(idx + 1).find(isOther)),
+    before: orderOf(beforeEl),
+    after: orderOf(afterEl),
+    beforeId: beforeEl?.dataset.id || null,
+    afterId: afterEl?.dataset.id || null,
   };
 }
 
