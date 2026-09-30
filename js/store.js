@@ -19,8 +19,8 @@
      store.logActivity(text)
      store.onActivity(cb)
 ------------------------------------------------------------------- */
-import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609300811";
-import { uid, todayISO } from "./util.js?v=202609300811";
+import { firebaseConfig, isConfigured, BOARD_ID, DEFAULT_COLUMNS } from "./config.js?v=202609300856";
+import { uid, todayISO } from "./util.js?v=202609300856";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
 
@@ -188,8 +188,8 @@ async function cloudStore() {
     onAuthStateChanged, setPersistence, browserLocalPersistence,
   } = authMod;
   const {
-    initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager,
-    doc, collection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
+    getFirestore,
+    doc, collection, setDoc, updateDoc, deleteDoc, onSnapshot,
     addDoc, getDocs, query, orderBy, limit, startAfter, writeBatch,
   } = fsMod;
 
@@ -201,14 +201,17 @@ async function cloudStore() {
      not worth surfacing — onAuthStateChanged reports the real outcome. */
   await getRedirectResult(auth).catch(() => {});
 
-  let db;
-  try {
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-    });
-  } catch {
-    db = getFirestore(app); // e.g. private-mode browsers without IndexedDB
-  }
+  /*  Plain in-memory cache, deliberately.
+
+      persistentLocalCache with persistentMultipleTabManager deadlocks one-shot
+      reads once more than one tab has touched the origin: getDoc and getDocs
+      never settle and never throw, while onSnapshot keeps working. Measured on
+      the live board — getDoc hung past nine seconds, the same listener
+      delivered. It took the board down to a blank screen with no error, and
+      would have hung the archive window too, since paging uses getDocs.
+
+      Offline queueing is not worth a failure mode that cannot be detected. */
+  const db = getFirestore(app);
 
   const boardRef = doc(db, "boards", BOARD_ID);
   const cardsRef = collection(db, "boards", BOARD_ID, "cards");
@@ -270,12 +273,19 @@ async function cloudStore() {
     async open(cb) {
       api._data = cb;
 
-      /* Bootstrap. Only the founder named in firestore.rules can create the
-         board; everyone else must be added to it afterwards. The two failure
-         modes read very differently to a person, so keep them apart. */
-      try {
-        const snap = await getDoc(boardRef);
-        if (!snap.exists()) {
+      /*  The listener is the source of truth, and nothing is awaited before
+          it is attached. Bootstrapping used to begin with a one-shot getDoc,
+          and a getDoc that never settles left the board permanently blank
+          with no error to show — which is exactly what happened. The first
+          snapshot now both delivers the board and reveals whether it still
+          needs creating, at one fewer read per load. */
+      let triedCreate = false;
+
+      api._unsubs.push(
+        onSnapshot(boardRef, async (s) => {
+          if (s.exists()) { api._data({ board: s.data() }); return; }
+          if (triedCreate) return;
+          triedCreate = true;
           try {
             await setDoc(boardRef, {
               ...emptyBoard(api.user.email),
@@ -283,20 +293,12 @@ async function cloudStore() {
               members: [{ email: api.user.email, name: api.user.name, role: "owner" }],
             });
           } catch (e) {
-            return api._err(e?.code === "permission-denied"
+            api._err(e?.code === "permission-denied"
               ? { code: "not-founder", message:
                   `Bu pano henüz kurulmamış ve ${api.user.email} panoyu kurma yetkisi olan ` +
                   "hesap değil. Önce pano sahibinin bir kez giriş yapması gerekiyor." }
               : translate(e));
           }
-        }
-      } catch (e) {
-        return api._err(translate(e));
-      }
-
-      api._unsubs.push(
-        onSnapshot(boardRef, (s) => {
-          if (s.exists()) api._data({ board: s.data() });
         }, (e) => api._err(translate(e))),
 
         onSnapshot(cardsRef, (s) => {

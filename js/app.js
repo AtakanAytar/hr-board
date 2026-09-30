@@ -1,9 +1,9 @@
-import { createStore, makeCard } from "./store.js?v=202609300811";
-import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609300811";
+import { createStore, makeCard } from "./store.js?v=202609300856";
+import { isConfigured, DEFAULT_COLUMNS } from "./config.js?v=202609300856";
 import {
   uid, esc, initials, colorFor, fmtDue, fmtWhen, daysUntil,
   debounce, parseTags, orderBetween, downloadFile, toCSV,
-} from "./util.js?v=202609300811";
+} from "./util.js?v=202609300856";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -76,10 +76,24 @@ function startBoard() {
     console.error("[HR Board]", message);
   });
   store.onActivity(renderActivity);
+
+  /*  A board that never arrives must say so. The previous failure showed a
+      signed-in, empty, errorless screen, which is indistinguishable from an
+      empty board and impossible to report usefully. */
+  const watchdog = setTimeout(() => {
+    if (state.board) return;
+    $("#syncDot").classList.add("is-off");
+    showBlockingError(
+      "Pano yüklenemedi. Bağlantı kurulamıyor gibi görünüyor — " +
+      "sayfayı yenilemeyi deneyin. Sorun sürerse bu sekmeyi kapatıp " +
+      "adresi yeni bir sekmede açın.");
+  }, 12000);
+
   store.open((patch) => {
     if (patch.board) state.board = patch.board;
     if (patch.cards) state.cards = patch.cards;
     if (!state.board) return;
+    clearTimeout(watchdog);
     syncBoardChrome();
     render();
   });
@@ -181,6 +195,7 @@ const bucketOf = (card) =>
 /* ============================================================
    Render
    ============================================================ */
+let lastBoardHTML = null;
 let rerenderQueued = false;
 let dragInProgress = false;
 let renderPendingAfterDrag = false;
@@ -209,11 +224,21 @@ function render() {
   const cards = visibleCards().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const cols = activeColumns();
 
-  board.innerHTML =
+  const html =
     cols.map((col) => columnHTML(col, cards.filter((c) => bucketOf(c) === col.key))).join("") +
     (state.view === "status" && amOwner()
       ? `<button class="add-column" data-act="add-column">+ Sütun ekle</button>`
       : "");
+
+  /*  Firestore reports every write twice — once optimistically, once when the
+      server acknowledges — and each snapshot lands here. Rewriting innerHTML
+      destroys and recreates every card, which throws away scroll position,
+      focus, and any element a pending click is aimed at. Skip the rebuild
+      when nothing about the output actually changed. */
+  if (html !== lastBoardHTML) {
+    lastBoardHTML = html;
+    board.innerHTML = html;
+  }
 
   $("#emptyState").hidden = !(cards.length === 0 && state.cards.length > 0);
   const n = state.filters.owners.size + state.filters.priorities.size + state.filters.flags.size;
@@ -445,7 +470,10 @@ function onBoardClick(e) {
   if (act === "del-column") return deleteColumn(e.target.closest("[data-act]").dataset.col);
 
   const card = e.target.closest(".card");
-  if (card && !card.classList.contains("is-ghost")) openCard(card.dataset.id);
+  if (card && !card.classList.contains("is-ghost")) {
+    if (gestureJustHandled()) return;   // pointerup already dealt with it
+    openCard(card.dataset.id);
+  }
 }
 
 const activeStatusColumns = () =>
@@ -817,15 +845,14 @@ function exportJSON() {
 /* ============================================================
    Drag & drop — pointer based, so it works on touch too
    ============================================================ */
-/*  A drag that starts and ends inside the same card still produces a click,
-    which would open the editor on top of the move the user just made. */
-function swallowNextClick() {
-  const eat = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
-  window.addEventListener("click", eat, { capture: true, once: true });
-  /* If no click follows — the pointer was released over a different element —
-     drop the listener rather than eating an unrelated click later. */
-  setTimeout(() => window.removeEventListener("click", eat, { capture: true }), 350);
-}
+/*  Card gestures are resolved on pointerup, so the click that follows has
+    nothing left to do. Rather than swallowing it with a capture-phase
+    listener — which would also stop unrelated handlers, like the one that
+    closes the account menu — note when a gesture was handled and let the
+    click through to everything except opening a card again. */
+let gestureHandledAt = 0;
+const markGestureHandled = () => { gestureHandledAt = Date.now(); };
+const gestureJustHandled = () => Date.now() - gestureHandledAt < 400;
 
 function initDrag() {
   const boardEl = $("#board");
@@ -853,7 +880,7 @@ function initDrag() {
       id: card.dataset.id, el: card, started: false,
       touch: e.pointerType === "touch", armed: e.pointerType !== "touch",
       sx: e.clientX, sy: e.clientY, pointerId: e.pointerId,
-      layer: null, line: null, target: null, holdTimer: 0,
+      layer: null, line: null, target: null, holdTimer: 0, maxMoved: 0,
     };
 
     if (drag.touch) {
@@ -873,6 +900,7 @@ function initDrag() {
     if (!drag) return;
     const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
     const moved = Math.hypot(dx, dy);
+    if (moved > drag.maxMoved) drag.maxMoved = moved;
 
     /* Moving before the hold completes means they meant to scroll. */
     if (drag.touch && !drag.armed) {
@@ -906,7 +934,16 @@ function initDrag() {
     document.body.classList.remove("is-dragging");
     stopScroll();
 
-    if (!d.started) return;
+    /*  A press that never became a drag is a tap. Open it from the id
+        recorded at pointerdown rather than waiting for the click event:
+        the click is delivered to whatever element occupies that spot when
+        it fires, and a re-render in between leaves it pointing at a node
+        that is no longer in the document. */
+    if (!d.started) {
+      markGestureHandled();
+      openCard(d.id);
+      return;
+    }
     dragInProgress = false;
 
     /* Read the marker's position BEFORE detaching it from the DOM —
@@ -927,6 +964,10 @@ function initDrag() {
     d.el.classList.remove("is-ghost");
 
     if (unmoved) {
+      /*  Dropped back where it started. A small wobble was a click; a
+          deliberate drag returned to its origin was a cancellation. */
+      markGestureHandled();
+      if (d.maxMoved < 25) openCard(d.id);
       /*  Nothing changed, so there is nothing to redraw — and redrawing here
           would be actively harmful: it replaces the card element before the
           browser delivers the click that follows this pointerup, so the click
@@ -940,7 +981,7 @@ function initDrag() {
       return;
     }
 
-    swallowNextClick();
+    markGestureHandled();
     renderPendingAfterDrag = false;   /* the write below redraws anyway */
     await commitMove(d.id, d.target, slot);
   };
